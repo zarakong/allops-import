@@ -1,0 +1,199 @@
+{
+  "hostname": "beflexdev",
+  "customer": "devops",
+  "timestamp": "2025-10-19T21:29:59+07:00",
+  "datecheck": "2025-10-19",
+  "os": {
+    "name": "Ubuntu",
+    "version_id": "24.04",
+    "version": "24.04.2 LTS (Noble Numbat)"
+  },
+  "memory": {
+    "total_kb": 16375256,
+    "used_kb": 13735012,
+    "free_kb": 180348,
+    "shared_kb": 75076,
+    "buff_cache_kb": 2872660
+  },
+  "cpu": {
+    "cores": 8
+  },
+  "disk": [
+    {
+      "mount": "/run",
+      "size_kb": 1637528,
+      "used_kb": 4208,
+      "avail_kb": 1633320,
+      "use_percent": "1%"
+    },
+    {
+      "mount": "/",
+      "size_kb": 514934016,
+      "used_kb": 167590936,
+      "avail_kb": 321112452,
+      "use_percent": "35%"
+    },
+    {
+      "mount": "/dev/shm",
+      "size_kb": 8187628,
+      "used_kb": 0,
+      "avail_kb": 8187628,
+      "use_percent": "0%"
+    },
+    {
+      "mount": "/run/lock",
+      "size_kb": 5120,
+      "used_kb": 0,
+      "avail_kb": 5120,
+      "use_percent": "0%"
+    },
+    {
+      "mount": "/run/user/1000",
+      "size_kb": 1637524,
+      "used_kb": 156,
+      "avail_kb": 1637368,
+      "use_percent": "1%"
+    },
+    {
+      "mount": "/media/beflex/Ubuntu 24.04.2 LTS amd64",
+      "size_kb": 6194550,
+      "used_kb": 6194550,
+      "avail_kb": 0,
+      "use_percent": "100%"
+    }
+  ],
+  "storages": {
+    "contentstore": {
+      "summary_kb": 913352,
+      "level1": [
+        {
+          "path": "/opt/data/office/alf-repo-data/contentstore/2023",
+          "size_kb": 450624
+        },
+        {
+          "path": "/opt/data/office/alf-repo-data/contentstore/2024",
+          "size_kb": 225312
+        },
+        {
+          "path": "/opt/data/office/alf-repo-data/contentstore/2025",
+          "size_kb": 237412
+        }
+      ],
+      "last_12_months": [
+        {
+          "month": "2025/10",
+          "path": "/opt/data/office/alf-repo-data/contentstore/2025/10",
+          "size_kb": 12456
+        },
+        {
+          "month": "2025/9",
+          "path": "/opt/data/office/alf-repo-data/contentstore/2025/9",
+          "size_kb": 34964
+        },
+        {
+          "month": "2025/8",
+          "path": "/opt/data/office/alf-repo-data/contentstore/2025/8",
+          "size_kb": 33892
+        },
+        {
+          "month": "2025/7",
+          "path": "/opt/data/office/alf-repo-data/contentstore/2025/7",
+          "size_kb": 156096
+        },
+        {
+          "month": "2025/6",
+          "path": "/opt/data/office/alf-repo-data/contentstore/2025/6",
+          "size_kb": 0
+        },
+        {
+          "month": "2025/5",
+          "path": "/opt/data/office/alf-repo-data/contentstore/2025/5",
+          "size_kb": 0
+        },
+        {
+          "month": "2025/4",
+          "path": "/opt/data/office/alf-repo-data/contentstore/2025/4",
+          "size_kb": 0
+        },
+        {
+          "month": "2025/3",
+          "path": "/opt/data/office/alf-repo-data/contentstore/2025/3",
+          "size_kb": 0
+        },
+        {
+          "month": "2025/2",
+          "path": "/opt/data/office/alf-repo-data/contentstore/2025/2",
+          "size_kb": 0
+        },
+        {
+          "month": "2025/1",
+          "path": "/opt/data/office/alf-repo-data/contentstore/2025/1",
+          "size_kb": 0
+        },
+        {
+          "month": "2024/12",
+          "path": "/opt/data/office/alf-repo-data/contentstore/2024/12",
+          "size_kb": 4
+        },
+        {
+          "month": "2024/11",
+          "path": "/opt/data/office/alf-repo-data/contentstore/2024/11",
+          "size_kb": 35140
+        }
+      ]
+    }
+  },
+  "env_workspace": "/opt/00_sup/allops_scripts/beflex-workspace/.env",
+  "workspace_env": "ALFRESCO_CE_TAG=23.1.1.7\nSEARCH_CE_TAG=2.0.12\nSHARE_TAG=23.1.2\nPOSTGRES_TAG=15.4\nTRANSFORM_ENGINE_TAG=5.1.0\nACTIVEMQ_TAG=5.17.1-jre11-rockylinux8\nBCM_TAG=23.1.274\nNGINX_TAG=1.25.4\nPDF_SERVICE=0.0.21\nQUICK_SHARE_FRONTEND=0.0.17\nQUICK_SHARE_BACKEND=0.0.20\nDOCUMENT_EXPIRE=0.0.23\nPDF_OFFICE_VIEWER_BACKEND=1.0.11\nWEBVIEWER_BACKEND=0.0.2\nPERMISSION_SERVICE=v0.0.6",
+  "env_pg": "15.4",
+  "alfresco": {
+    "api_url": "https://aaegis.bcircle.co.th/alfresco/api/-default-/public/search/versions/1/search",
+    "total_files": 0,
+    "total_bytes": 0,
+    "total_mb": 0
+  },
+  "transactions": [
+    {
+      "transstartdate": "2025-10-01",
+      "transenddate": "2025-10-19",
+      "data": {
+        "totalItems": null
+      }
+    },
+    {
+      "transstartdate": "2025-09-01",
+      "transenddate": "2025-09-30",
+      "data": {
+        "totalItems": null
+      }
+    },
+    {
+      "transstartdate": "2025-08-01",
+      "transenddate": "2025-08-31",
+      "data": {
+        "totalItems": null
+      }
+    },
+    {
+      "transstartdate": "2025-07-01",
+      "transenddate": "2025-07-31",
+      "data": {
+        "totalItems": null
+      }
+    },
+    {
+      "transstartdate": "2025-06-01",
+      "transenddate": "2025-06-30",
+      "data": {
+        "totalItems": null
+      }
+    },
+    {
+      "transstartdate": "2025-05-01",
+      "transenddate": "2025-05-31",
+      "data": {
+        "totalItems": null
+      }
+    }
+  ]
+}
