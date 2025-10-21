@@ -1,0 +1,19 @@
+{
+  "name": "Allops PM UI",
+  "dockerFile": "Dockerfile",
+  "context": "..",
+  "appPort": [
+    "3000"
+  ],
+  "settings": {
+    "terminal.integrated.shell.linux": "/bin/bash"
+  },
+  "extensions": [
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "ms-azuretools.vscode-docker",
+    "ms-vscode.vscode-typescript-tslint-plugin"
+  ],
+  "postCreateCommand": "npm install --prefix frontend && npm install --prefix backend",
+  "remoteUser": "vscode"
+}

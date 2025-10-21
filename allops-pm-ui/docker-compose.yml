@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=postgres://user:password@db:5432/allops_db
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15.6
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: allops_db
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./db/allops-db.sql:/docker-entrypoint-initdb.d/allops-db.sql
+
+volumes:
+  db_data:

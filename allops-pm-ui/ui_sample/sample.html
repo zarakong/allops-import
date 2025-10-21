@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Allops PM UI</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <div class="sidebar">
+            <h2>เมนูหลัก</h2>
+            <ul>
+                <li><a href="#report">Report</a></li>
+                <li><a href="#customer">Customer</a></li>
+                <li><a href="#task-pm">Task PM</a></li>
+                <li><a href="#upload-pm">Upload PM data</a></li>
+            </ul>
+        </div>
+        <div class="content">
+            <h1>ยินดีต้อนรับสู่ระบบ Allops PM</h1>
+            <div id="report" class="page">
+                <h2>รายงาน</h2>
+                <!-- รายงานจะถูกแสดงที่นี่ -->
+            </div>
+            <div id="customer" class="page">
+                <h2>การจัดการลูกค้า</h2>
+                <button id="new-customer">ลูกค้าใหม่</button>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Action</th>
+                            <th>ชื่อลูกค้า</th>
+                            <th>คำย่อ</th>
+                            <th>รายละเอียดเสริม</th>
+                            <th>วันที่สร้าง</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- ข้อมูลลูกค้าจะถูกแสดงที่นี่ -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="task-pm" class="page">
+                <h2>Task PM</h2>
+                <!-- รายละเอียด Task PM จะถูกแสดงที่นี่ -->
+            </div>
+            <div id="upload-pm" class="page">
+                <h2>อัปโหลดข้อมูล PM</h2>
+                <!-- ฟอร์มอัปโหลดข้อมูล PM จะถูกแสดงที่นี่ -->
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
