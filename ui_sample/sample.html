@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PM Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #EFF5D2;
+        }
+        ::-webkit-scrollbar-thumb {
+            background-color: #8FA31E;
+            border-radius: 10px;
+            border: 2px solid #EFF5D2;
+        }
+        /* Custom styles to apply the color theme */
+        .theme-bg-dark { background-color: #556B2F; }
+        .theme-bg-medium { background-color: #8FA31E; }
+        .theme-bg-light { background-color: #C6D870; }
+        .theme-bg-extralight { background-color: #EFF5D2; }
+        .theme-text-dark { color: #556B2F; }
+        .theme-text-medium { color: #8FA31E; }
+        .theme-text-light { color: #C6D870; }
+        .theme-text-extralight { color: #EFF5D2; }
+        .theme-border-dark { border-color: #556B2F; }
+        .theme-border-medium { border-color: #8FA31E; }
+        
+        .sidebar {
+            transition: width 0.3s ease;
+        }
+        .sidebar-collapsed {
+            width: 4rem; /* 64px */
+        }
+        .sidebar-expanded {
+            width: 16rem; /* 256px */
+        }
+        .rotate-180 {
+            transform: rotate(180deg);
+            transition: transform 0.3s ease;
+        }
+        .nav-link:hover {
+            background-color: #8FA31E;
+        }
+        .nav-link.active {
+            background-color: #C6D870;
+            color: #556B2F;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="theme-bg-extralight font-sans">
+
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="theme-bg-dark text-white p-4 flex flex-col justify-between sidebar sidebar-expanded">
+            <div>
+                <div class="flex items-center justify-between mb-8">
+                    <h1 id="sidebar-title" class="text-2xl font-bold text-white whitespace-nowrap">PM System</h1>
+                    <button id="toggle-sidebar-btn" class="p-2 rounded-full hover:bg-gray-700">
+                        <svg id="toggle-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                </div>
+                <nav>
+                    <ul>
+                        <li>
+                            <a href="#" class="nav-link flex items-center p-3 my-2 rounded-lg" data-page="report">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><line x1="10" y1="9" x2="8" y2="9"></line></svg>
+                                <span class="ml-4 nav-text whitespace-nowrap">Report</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" id="customer-nav-link" class="nav-link active flex items-center p-3 my-2 rounded-lg" data-page="customer">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                                <span class="ml-4 nav-text whitespace-nowrap">Customer</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="nav-link flex items-center p-3 my-2 rounded-lg" data-page="upload-pm">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                <span class="ml-4 nav-text whitespace-nowrap">Upload PM data</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+            <div class="text-center text-sm text-gray-400">
+                <span class="nav-text">© 2025</span>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-8 overflow-y-auto">
+            
+            <!-- Customer Page -->
+            <div id="customer-page" class="page-content">
+                <div class="mb-6">
+                    <h2 class="text-3xl font-bold theme-text-dark mb-4">Customer Management</h2>
+                    
+                    <!-- Buttons and Search Bar Row -->
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
+                        <!-- Buttons Group (New Customer, New PM) -->
+                        <div class="flex justify-start items-center space-x-2">
+                            <button class="bg-green-700 hover:bg-green-800 text-white font-bold py-2 px-4 rounded-lg flex items-center shadow-md transition-transform transform hover:scale-105">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 mr-2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                New Customer
+                            </button>
+                            <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg flex items-center shadow-md transition-transform transform hover:scale-105">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 mr-2"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path></svg>
+                                New PM
+                            </button>
+                        </div>
+
+                        <!-- Search Input -->
+                        <div class="w-full sm:w-1/3 min-w-[200px]">
+                            <label for="customer-search" class="sr-only">Customer Search</label>
+                            <input type="text" id="customer-search" placeholder="Customer search..." class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-theme-bg-medium" aria-label="Customer search">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <button id="back-to-all-btn" class="hidden bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg flex items-center shadow-md mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 mr-2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                        Back to all customers
+                    </button>
+                    <h3 class="text-xl font-semibold theme-text-dark">รายชื่อลูกค้า</h3>
+                </div>
+
+                <div class="flex items-center justify-end mb-4">
+                    <label for="rows-per-page" class="text-sm font-medium text-gray-700 mr-2">แสดง:</label>
+                    <select id="rows-per-page" name="rows-per-page" class="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                        <option value="10">10</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="all">All</option>
+                    </select>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table id="customer-table" class="w-full text-left">
+                            <thead class="theme-bg-medium text-white uppercase text-sm">
+                                <tr>
+                                    <th class="p-4 text-center">จัดการ</th>
+                                    <th class="p-4">ชื่อลูกค้า</th>
+                                    <th class="p-4">คำย่อ</th>
+                                    <th class="p-4">รายละเอียดเสริม</th>
+                                    <th class="p-4">วันที่สร้าง</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                <!-- Sample Data Rows (Important: Must be full data for search filtering) -->
+                                <tr class="customer-row hover:bg-gray-100">
+                                    <td class="p-4 text-center whitespace-nowrap">
+                                        <button class="edit-customer-btn p-2 rounded-md hover:bg-gray-200 text-blue-600 hover:text-blue-800">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2l-.15.08a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l-.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1 0-2l.15.08a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        </button>
+                                        <button class="view-pm-plan-btn p-2 rounded-md hover:bg-gray-200 text-green-600 hover:text-green-800">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                                        </button>
+                                    </td>
+                                    <td class="p-4 theme-text-dark font-semibold">บริษัท ก้าวหน้า เทคโนโลยี จำกัด</td>
+                                    <td class="p-4">KNT</td>
+                                    <td class="p-4 text-gray-600">ดูแลระบบ Server และ Network</td>
+                                    <td class="p-4 text-gray-500">2025-10-15</td>
+                                </tr>
+                                <tr class="customer-row hover:bg-gray-100">
+                                    <td class="p-4 text-center whitespace-nowrap">
+                                         <button class="edit-customer-btn p-2 rounded-md hover:bg-gray-200 text-blue-600 hover:text-blue-800">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2l-.15.08a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l-.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1 0-2l.15.08a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        </button>
+                                        <button class="view-pm-plan-btn p-2 rounded-md hover:bg-gray-200 text-green-600 hover:text-green-800">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                                        </button>
+                                    </td>
+                                    <td class="p-4 theme-text-dark font-semibold">ห้างหุ้นส่วนจำกัด สามัคคีการค้า</td>
+                                    <td class="p-4">SMK</td>
+                                    <td class="p-4 text-gray-600">PM เฉพาะระบบ POS</td>
+                                    <td class="p-4 text-gray-500">2025-09-22</td>
+                                </tr>
+                                 <tr class="customer-row hover:bg-gray-100">
+                                    <td class="p-4 text-center whitespace-nowrap">
+                                        <button class="edit-customer-btn p-2 rounded-md hover:bg-gray-200 text-blue-600 hover:text-blue-800">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2l-.15.08a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l-.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1 0-2l.15.08a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        </button>
+                                        <button class="view-pm-plan-btn p-2 rounded-md hover:bg-gray-200 text-green-600 hover:text-green-800">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                                        </button>
+                                    </td>
+                                    <td class="p-4 theme-text-dark font-semibold">Central Retail Corporation</td>
+                                    <td class="p-4">CRC</td>
+                                    <td class="p-4 text-gray-600">PM รายไตรมาส</td>
+                                    <td class="p-4 text-gray-500">2025-08-01</td>
+                                </tr>
+                                <tr class="customer-row hover:bg-gray-100">
+                                    <td class="p-4 text-center whitespace-nowrap">
+                                        <button class="edit-customer-btn p-2 rounded-md hover:bg-gray-200 text-blue-600 hover:text-blue-800">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2l-.15.08a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l-.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1 0-2l.15.08a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        </button>
+                                        <button class="view-pm-plan-btn p-2 rounded-md hover:bg-gray-200 text-green-600 hover:text-green-800">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                                        </button>
+                                    </td>
+                                    <td class="p-4 theme-text-dark font-semibold">โรงพยาบาลกรุงเทพ</td>
+                                    <td class="p-4">BKH</td>
+                                    <td class="p-4 text-gray-600">ระบบ HIS และห้อง Data Center</td>
+                                    <td class="p-4 text-gray-500">2025-07-18</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- PM Plan Section (Initially hidden) -->
+            <div id="pm-plan-section" class="hidden mt-10">
+                <h2 class="text-2xl font-bold theme-text-dark">PM plan</h2>
+                <h4 id="selected-customer-name" class="text-lg font-semibold text-gray-700 mb-4"></h4>
+                <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="theme-bg-medium text-white uppercase text-sm">
+                                <tr>
+                                    <th class="p-4">ปี PM</th>
+                                    <th class="p-4">รอบ PM</th>
+                                    <th class="p-4">หัวข้อ PM</th>
+                                    <th class="p-4">สถานะ</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                <!-- Sample PM Plan Data (Example for KNT) -->
+                                <tr>
+                                    <td class="p-4">2025</td>
+                                    <td class="p-4">Q4</td>
+                                    <td class="p-4">ตรวจสอบ Server และ Network Infrastructure</td>
+                                    <td class="p-4"><span class="px-3 py-1 text-sm font-semibold rounded-full bg-green-700 text-white">เสร็จสิ้น</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="p-4">2026</td>
+                                    <td class="p-4">Q1</td>
+                                    <td class="p-4">ตรวจสอบ Server และ Network Infrastructure</td>
+                                    <td class="p-4"><span class="px-3 py-1 text-sm font-semibold rounded-full bg-blue-200 text-blue-800">นำเข้าข้อมูล</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="p-4">2026</td>
+                                    <td class="p-4">Q2</td>
+                                    <td class="p-4">ตรวจสอบ Server และ Network Infrastructure</td>
+                                    <td class="p-4"><span class="px-3 py-1 text-sm font-semibold rounded-full bg-yellow-200 text-yellow-800">รอ</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Other Pages (Hidden by default) -->
+            <div id="report-page" class="page-content hidden">
+                <h2 class="text-3xl font-bold theme-text-dark">Report</h2>
+                 <p class="mt-4 text-gray-700">ส่วนนี้สำหรับแสดงรายงานต่างๆ</p>
+            </div>
+            <div id="upload-pm-page" class="page-content hidden">
+                <h2 class="text-3xl font-bold theme-text-dark">Upload PM Data</h2>
+                 <p class="mt-4 text-gray-700">ส่วนนี้สำหรับอัปโหลดข้อมูล PM</p>
+            </div>
+
+            <!-- Edit Customer Modal -->
+            <div id="edit-customer-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+                <div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-md mx-4">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-2xl font-bold theme-text-dark">Edit Customer Information</h3>
+                        <button id="close-modal-btn" class="text-gray-500 hover:text-gray-800">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    </div>
+                    <form>
+                        <div class="mb-4">
+                            <label for="modal_cust_name" class="block text-gray-700 text-sm font-bold mb-2">ชื่อลูกค้า:</label>
+                            <input type="text" id="modal_cust_name" name="cust_name" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-green-500">
+                        </div>
+                        <div class="mb-4">
+                            <label for="modal_cust_code" class="block text-gray-700 text-sm font-bold mb-2">คำย่อ:</label>
+                            <input type="text" id="modal_cust_code" name="cust_code" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-green-500">
+                        </div>
+                        <div class="mb-6">
+                            <label for="modal_cust_remark" class="block text-gray-700 text-sm font-bold mb-2">รายละเอียดเสริม:</label>
+                            <textarea id="modal_cust_remark" name="cust_remark" rows="3" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-green-500"></textarea>
+                        </div>
+                        <div class="flex items-center justify-end space-x-4">
+                            <button type="button" id="cancel-modal-btn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline">
+                                Cancel
+                            </button>
+                            <button type="submit" class="theme-bg-medium hover:bg-opacity-90 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline">
+                                Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // --- Element Selections ---
+            const sidebar = document.getElementById('sidebar');
+            const toggleBtn = document.getElementById('toggle-sidebar-btn');
+            const toggleIcon = document.getElementById('toggle-icon');
+            const sidebarTitle = document.getElementById('sidebar-title');
+            const navTexts = document.querySelectorAll('.nav-text');
+            const navLinks = document.querySelectorAll('.nav-link');
+            const pages = document.querySelectorAll('.page-content');
+            const editCustomerBtns = document.querySelectorAll('.edit-customer-btn');
+            const viewPmPlanBtns = document.querySelectorAll('.view-pm-plan-btn');
+            const modal = document.getElementById('edit-customer-modal');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+            const cancelModalBtn = document.getElementById('cancel-modal-btn');
+            const pmPlanSection = document.getElementById('pm-plan-section');
+            const customerRows = document.querySelectorAll('.customer-row');
+            const selectedCustomerNameEl = document.getElementById('selected-customer-name');
+            const backToAllBtn = document.getElementById('back-to-all-btn');
+            const customerSearchInput = document.getElementById('customer-search');
+
+
+            // --- Sidebar Toggle Functionality ---
+            toggleBtn.addEventListener('click', () => {
+                sidebar.classList.toggle('sidebar-expanded');
+                sidebar.classList.toggle('sidebar-collapsed');
+                toggleIcon.classList.toggle('rotate-180');
+                sidebarTitle.classList.toggle('hidden');
+                navTexts.forEach(text => text.classList.toggle('hidden'));
+            });
+
+            // --- Reset View Function ---
+            const resetCustomerView = () => {
+                // Ensure all customer rows are shown
+                document.querySelectorAll('#customer-table tbody tr').forEach(row => row.classList.remove('hidden'));
+                
+                // Hide PM plan section
+                if(pmPlanSection) pmPlanSection.classList.add('hidden');
+                
+                // Hide Back button
+                if(backToAllBtn) backToAllBtn.classList.add('hidden');
+            };
+
+            // --- Page Navigation ---
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    navLinks.forEach(l => l.classList.remove('active'));
+                    link.classList.add('active');
+                    
+                    const pageId = link.getAttribute('data-page');
+                    pages.forEach(page => {
+                        page.classList.toggle('hidden', page.id !== `${pageId}-page`);
+                    });
+
+                    // If navigating to customer page, reset the view
+                    if(pageId === 'customer') {
+                        resetCustomerView();
+                    }
+                });
+            });
+
+            // --- Modal Functionality (Edit Customer) ---
+            const openModal = (e) => {
+                e.preventDefault();
+                const row = e.currentTarget.closest('tr');
+                // Cells are 0-indexed. 0: Gear, 1: Name, 2: Code, 3: Remark, 4: Date
+                const customerName = row.cells[1].textContent.trim();
+                const customerCode = row.cells[2].textContent.trim();
+                const customerRemark = row.cells[3].textContent.trim();
+
+                document.getElementById('modal_cust_name').value = customerName;
+                document.getElementById('modal_cust_code').value = customerCode;
+                document.getElementById('modal_cust_remark').value = customerRemark;
+                
+                if (modal) modal.classList.remove('hidden');
+            };
+
+            const closeModal = () => {
+                if (modal) modal.classList.add('hidden');
+            };
+
+            editCustomerBtns.forEach(btn => btn.addEventListener('click', openModal));
+            if(closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
+            if(cancelModalBtn) cancelModalBtn.addEventListener('click', closeModal);
+            if (modal) {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) closeModal();
+                });
+            }
+
+            // --- PM Plan View Functionality (Green Report Icon) ---
+            viewPmPlanBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const selectedRow = e.currentTarget.closest('tr');
+                    const customerName = selectedRow.cells[1].textContent.trim();
+
+                    // Hide all other customer rows
+                    customerRows.forEach(row => {
+                        if(row !== selectedRow) {
+                            row.classList.add('hidden');
+                        }
+                    });
+
+                    // Show PM Plan section
+                    if (selectedCustomerNameEl) selectedCustomerNameEl.textContent = customerName;
+                    if (pmPlanSection) pmPlanSection.classList.remove('hidden');
+                    if (backToAllBtn) backToAllBtn.classList.remove('hidden');
+                });
+            });
+            
+            // --- Back to All Customers Button ---
+            if (backToAllBtn) {
+                backToAllBtn.addEventListener('click', resetCustomerView);
+            }
+
+            // --- Customer Search Functionality ---
+            if (customerSearchInput) {
+                customerSearchInput.addEventListener('keyup', function() {
+                    const searchTerm = this.value.toLowerCase();
+                    const allRows = document.querySelectorAll('#customer-table tbody tr');
+                    
+                    allRows.forEach(row => {
+                        // Cells[1] = Name, Cells[2] = Code
+                        const name = row.cells[1].textContent.toLowerCase();
+                        const code = row.cells[2].textContent.toLowerCase();
+                        
+                        if (name.includes(searchTerm) || code.includes(searchTerm)) {
+                            row.classList.remove('hidden');
+                        } else {
+                            row.classList.add('hidden');
+                        }
+                    });
+                    
+                    // Always reset PM plan view when searching
+                    if(pmPlanSection && !pmPlanSection.classList.contains('hidden')) {
+                        pmPlanSection.classList.add('hidden');
+                        backToAllBtn.classList.add('hidden');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
