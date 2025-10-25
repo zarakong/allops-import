@@ -1,0 +1,24 @@
+# Multi-stage production build for React app
+# Stage 1: build the app
+FROM node:18-alpine AS build
+WORKDIR /app
+
+# Install dependencies (use package-lock if present for deterministic installs)
+COPY package*.json ./
+RUN npm ci
+
+# Copy sources and build
+COPY . .
+RUN npm run build
+
+# Stage 2: serve with nginx
+FROM nginx:alpine
+# Remove default nginx content
+RUN rm -rf /usr/share/nginx/html/*
+
+# Copy build artifacts from the previous stage
+COPY --from=build /app/build /usr/share/nginx/html
+
+# Optional: provide a small healthcheck (nginx responds 200 on /)
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

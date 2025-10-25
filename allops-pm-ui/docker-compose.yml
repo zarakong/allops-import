@@ -7,6 +7,33 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
+    volumes:
+      - ./logs/frontend:/app/logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      - backend
+
+  # Production frontend service (uses the multi-stage Dockerfile.prod)
+  # This service is intended for production builds — it serves the
+  # static build output with nginx. It is kept separate from the
+  # development `frontend` service so local dev workflow is not broken.
+  frontend-prod:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    ports:
+      # maps host port 8080 to container port 80 (nginx). Change host port as needed.
+      - "8080:80"
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     depends_on:
       - backend
 
@@ -16,21 +43,17 @@ services:
       dockerfile: Dockerfile
     ports:
       - "5000:5000"
-    environment:
-      - DATABASE_URL=postgres://user:password@db:5432/allops_db
-    depends_on:
-      - db
-
-  db:
-    image: postgres:15.6
-    restart: always
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: allops_db
     volumes:
-      - db_data:/var/lib/postgresql/data
-      - ./db/allops-db.sql:/docker-entrypoint-initdb.d/allops-db.sql
-
-volumes:
-  db_data:
+      - ./logs/backend:/app/logs
+    environment:
+      - DB_HOST=150.107.29.130
+      - DB_PORT=5435
+      - DB_NAME=allops
+      - DB_USER=postgresql15
+      - DB_PASSWORD=S@L15pgaSW
+      - LOG_LEVEL=info
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

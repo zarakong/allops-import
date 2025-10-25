@@ -1,71 +1,75 @@
 {
-  "hostname": "beflexdev",
-  "customer": "devops",
-  "timestamp": "2025-10-19T21:26:36+07:00",
-  "datecheck": "2025-10-19",
-  "os": {
-    "name": "Ubuntu",
-    "version_id": "24.04",
-    "version": "24.04.2 LTS (Noble Numbat)"
+  "customer": "nbtc",
+  "env": "prod",
+  "timestamp": "2025-10-24T22:31:53+07:00",
+  "datecheck": "2025-10-24",
+  "server_spec": {
+    "hostname": "beflexdev",
+    "os": {
+      "name": "Ubuntu",
+      "version_id": "24.04",
+      "version": "24.04.2 LTS (Noble Numbat)"
+    },
+    "memory": {
+      "total_kb": 16375256,
+      "used_kb": 15361460,
+      "free_kb": 312876,
+      "shared_kb": 95792,
+      "buff_cache_kb": 1134336
+    },
+    "cpu_model_name": "Intel(R) Xeon(R) Silver 4214R CPU @ 2.40GHz",
+    "cpu": {
+      "cores": 8
+    },
+    "disk": [
+      {
+        "mount": "/run",
+        "size_kb": 1637528,
+        "used_kb": 8524,
+        "avail_kb": 1629004,
+        "use_percent": "1%"
+      },
+      {
+        "mount": "/",
+        "size_kb": 514934016,
+        "used_kb": 190389676,
+        "avail_kb": 298313712,
+        "use_percent": "39%"
+      },
+      {
+        "mount": "/dev/shm",
+        "size_kb": 8187628,
+        "used_kb": 0,
+        "avail_kb": 8187628,
+        "use_percent": "0%"
+      },
+      {
+        "mount": "/run/lock",
+        "size_kb": 5120,
+        "used_kb": 0,
+        "avail_kb": 5120,
+        "use_percent": "0%"
+      },
+      {
+        "mount": "/run/user/1000",
+        "size_kb": 1637524,
+        "used_kb": 156,
+        "avail_kb": 1637368,
+        "use_percent": "1%"
+      },
+      {
+        "mount": "/media/beflex/Ubuntu 24.04.2 LTS amd64",
+        "size_kb": 6194550,
+        "used_kb": 6194550,
+        "avail_kb": 0,
+        "use_percent": "100%"
+      }
+    ]
   },
-  "memory": {
-    "total_kb": 16375256,
-    "used_kb": 13557444,
-    "free_kb": 313812,
-    "shared_kb": 75076,
-    "buff_cache_kb": 2916764
-  },
-  "cpu": {
-    "cores": 8
-  },
-  "disk": [
-    {
-      "mount": "/run",
-      "size_kb": 1637528,
-      "used_kb": 4208,
-      "avail_kb": 1633320,
-      "use_percent": "1%"
-    },
-    {
-      "mount": "/",
-      "size_kb": 514934016,
-      "used_kb": 167581216,
-      "avail_kb": 321122172,
-      "use_percent": "35%"
-    },
-    {
-      "mount": "/dev/shm",
-      "size_kb": 8187628,
-      "used_kb": 0,
-      "avail_kb": 8187628,
-      "use_percent": "0%"
-    },
-    {
-      "mount": "/run/lock",
-      "size_kb": 5120,
-      "used_kb": 0,
-      "avail_kb": 5120,
-      "use_percent": "0%"
-    },
-    {
-      "mount": "/run/user/1000",
-      "size_kb": 1637524,
-      "used_kb": 156,
-      "avail_kb": 1637368,
-      "use_percent": "1%"
-    },
-    {
-      "mount": "/media/beflex/Ubuntu 24.04.2 LTS amd64",
-      "size_kb": 6194550,
-      "used_kb": 6194550,
-      "avail_kb": 0,
-      "use_percent": "100%"
-    }
-  ],
   "storages": {
     "contentstore": {
-      "summary_kb": 913352,
-      "level1": [
+      "summary_kb": 900964,
+      "Alf_conternt_year": [
         {
           "path": "/opt/data/office/alf-repo-data/contentstore/2023",
           "size_kb": 450624
@@ -76,19 +80,19 @@
         },
         {
           "path": "/opt/data/office/alf-repo-data/contentstore/2025",
-          "size_kb": 237412
+          "size_kb": 225024
         }
       ],
-      "last_12_months": [
+      "alf_last_12_months": [
         {
           "month": "2025/10",
           "path": "/opt/data/office/alf-repo-data/contentstore/2025/10",
-          "size_kb": 12456
+          "size_kb": 84
         },
         {
           "month": "2025/9",
           "path": "/opt/data/office/alf-repo-data/contentstore/2025/9",
-          "size_kb": 34964
+          "size_kb": 34948
         },
         {
           "month": "2025/8",
@@ -155,9 +159,9 @@
   "transactions": [
     {
       "transstartdate": "2025-10-01",
-      "transenddate": "2025-10-19",
+      "transenddate": "2025-10-24",
       "data": {
-        "totalItems": 655
+        "totalItems": 795
       }
     },
     {

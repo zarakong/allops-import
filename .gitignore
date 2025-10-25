@@ -1,0 +1,73 @@
+# .gitignore สำหรับโปรเจคทั้งหมด (แนะนำให้เก็บไฟล์นี้ไว้ที่ root)
+# ไฟล์/โฟลเดอร์ที่ไม่ควรนำขึ้น Git: ไฟล์บิวด์ ชุดพัฒนา เครื่องมือของผู้พัฒนา และข้อมูลที่มีความลับ
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.pnp.*
+.npm/
+
+# Build / output
+/build/
+/dist/
+/frontend/build/
+/backend/dist/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Env / secret files
+.env
+.env.*
+.local
+
+# Docker-compose override / local compose
+docker-compose.override.yml
+
+# Editors
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# TypeScript
+*.tsbuildinfo
+
+# Coverage
+coverage/
+
+# Temp
+tmp/
+temp/
+
+# Archive
+*.tgz
+
+# macOS
+.AppleDouble
+.LSOverride
+
+# Windows
+Ehthumbs.db
+
+# Misc
+node_repl_history
+
+# Optional: if you use log folders for frontend/backend
+logs/backend/
+logs/frontend/
+
+# If you add local database dumps that shouldn't be committed
+*.sql
+*.dump
+
+# End of file

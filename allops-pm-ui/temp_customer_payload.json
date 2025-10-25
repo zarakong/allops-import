@@ -1,0 +1,1 @@
+{"customer":{"cust_name":"Test Co Ltd","cust_code":"TESTCO","project_name":"Demo Project","cust_desc":"Created by automated test"},"envs":[{"env_name":"PROD"},{"env_name":"TEST"}],"apps":[{"env":"PROD","app_name":"App1"},{"env":"TEST","app_name":"App2"}],"pmRows":[{"pm_name":"Contract A","pm_year":"2025","round":1},{"pm_name":"Contract B","pm_year":"2025","round":2}]}
