@@ -1,8 +1,8 @@
 {
   "customer": "nbtc",
   "env": "prod",
-  "timestamp": "2025-10-24T22:32:54+07:00",
-  "datecheck": "2025-10-24",
+  "timestamp": "2025-11-14T22:41:36+07:00",
+  "datecheck": "2025-11-14",
   "server_spec": {
     "hostname": "beflexdev",
     "os": {
@@ -12,10 +12,10 @@
     },
     "memory": {
       "total_kb": 16375256,
-      "used_kb": 15244072,
-      "free_kb": 427884,
-      "shared_kb": 95792,
-      "buff_cache_kb": 1136708
+      "used_kb": 15302232,
+      "free_kb": 600972,
+      "shared_kb": 175120,
+      "buff_cache_kb": 984860
     },
     "cpu_model_name": "Intel(R) Xeon(R) Silver 4214R CPU @ 2.40GHz",
     "cpu": {
@@ -25,16 +25,16 @@
       {
         "mount": "/run",
         "size_kb": 1637528,
-        "used_kb": 8524,
-        "avail_kb": 1629004,
+        "used_kb": 8716,
+        "avail_kb": 1628812,
         "use_percent": "1%"
       },
       {
         "mount": "/",
         "size_kb": 514934016,
-        "used_kb": 190391296,
-        "avail_kb": 298312092,
-        "use_percent": "39%"
+        "used_kb": 165318688,
+        "avail_kb": 323384700,
+        "use_percent": "34%"
       },
       {
         "mount": "/dev/shm",
@@ -53,8 +53,8 @@
       {
         "mount": "/run/user/1000",
         "size_kb": 1637524,
-        "used_kb": 156,
-        "avail_kb": 1637368,
+        "used_kb": 160,
+        "avail_kb": 1637364,
         "use_percent": "1%"
       },
       {
@@ -68,7 +68,7 @@
   },
   "storages": {
     "contentstore": {
-      "summary_kb": 900964,
+      "summary_kb": 900900,
       "Alf_conternt_year": [
         {
           "path": "/opt/data/office/alf-repo-data/contentstore/2023",
@@ -80,19 +80,24 @@
         },
         {
           "path": "/opt/data/office/alf-repo-data/contentstore/2025",
-          "size_kb": 225024
+          "size_kb": 224960
         }
       ],
       "alf_last_12_months": [
         {
+          "month": "2025/11",
+          "path": "/opt/data/office/alf-repo-data/contentstore/2025/11",
+          "size_kb": 4
+        },
+        {
           "month": "2025/10",
           "path": "/opt/data/office/alf-repo-data/contentstore/2025/10",
-          "size_kb": 84
+          "size_kb": 64
         },
         {
           "month": "2025/9",
           "path": "/opt/data/office/alf-repo-data/contentstore/2025/9",
-          "size_kb": 34948
+          "size_kb": 34900
         },
         {
           "month": "2025/8",
@@ -138,11 +143,6 @@
           "month": "2024/12",
           "path": "/opt/data/office/alf-repo-data/contentstore/2024/12",
           "size_kb": 4
-        },
-        {
-          "month": "2024/11",
-          "path": "/opt/data/office/alf-repo-data/contentstore/2024/11",
-          "size_kb": 35140
         }
       ]
     }
@@ -152,16 +152,23 @@
   "env_pg": "15.4",
   "alfresco": {
     "api_url": "https://aegis.bcircle.co.th/alfresco/api/-default-/public/search/versions/1/search",
-    "total_files": 447,
-    "total_bytes": 191261879,
-    "total_mb": 182.40
+    "total_files": 570,
+    "total_bytes": 235540554,
+    "total_mb": 224.63
   },
   "transactions": [
     {
-      "transstartdate": "2025-10-01",
-      "transenddate": "2025-10-24",
+      "transstartdate": "2025-11-01",
+      "transenddate": "2025-11-14",
       "data": {
-        "totalItems": 802
+        "totalItems": 6045
+      }
+    },
+    {
+      "transstartdate": "2025-10-01",
+      "transenddate": "2025-10-31",
+      "data": {
+        "totalItems": 889
       }
     },
     {
@@ -188,13 +195,6 @@
     {
       "transstartdate": "2025-06-01",
       "transenddate": "2025-06-30",
-      "data": {
-        "totalItems": 0
-      }
-    },
-    {
-      "transstartdate": "2025-05-01",
-      "transenddate": "2025-05-31",
       "data": {
         "totalItems": 0
       }

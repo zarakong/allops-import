@@ -33,6 +33,38 @@ export const fetchPMPlans = async (opts?: { q?: string; pm_year?: string; cust_i
   }
 };
 
+export const fetchPMById = async (id: number): Promise<any> => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/api/pm/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching PM by id:', error);
+    throw error;
+  }
+};
+
+export const fetchPmRound = async (pmId: number, envId: number, serverId: number): Promise<any[]> => {
+  try {
+    const url = `${API_BASE_URL}/api/pm/round`;
+    const resp = await axios.get(url, { params: { pm_id: pmId, env_id: envId, server_id: serverId } });
+    return resp.data;
+  } catch (error) {
+    console.error('Error fetching pm_round by keys:', error);
+    throw error;
+  }
+};
+
+export const fetchImportHeader = async (opts: { cust_id?: number; pm_id?: number }): Promise<any> => {
+  try {
+    const url = `${API_BASE_URL}/api/pm/import/header`;
+    const resp = await axios.get(url, { params: opts });
+    return resp.data;
+  } catch (error) {
+    console.error('Error fetching import header:', error);
+    throw error;
+  }
+};
+
 export const fetchCustomerById = async (custId: number): Promise<any> => {
   try {
     const response = await axios.get(`${API_BASE_URL}/api/customers/${custId}`);
@@ -72,4 +104,95 @@ export const deletePMPlan = async (id: number): Promise<void> => {
   }
 };
 
-export default {};
+export const importPM = async (payload: any): Promise<any> => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/api/pm/import`, payload, { headers: { 'Content-Type': 'application/json' } });
+    return response.data;
+  } catch (error) {
+    console.error('Error importing pm data:', error);
+    throw error;
+  }
+};
+
+export const fetchAlfrescoApiResponses = async (pmId: number): Promise<any[]> => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/api/pm/${pmId}/alfresco-api`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching Alfresco API responses:', error);
+    throw error;
+  }
+};
+
+export const fetchAppContentSizing = async (pmId: number): Promise<any[]> => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/api/pm/${pmId}/app-content-sizing`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching application content sizing:', error);
+    throw error;
+  }
+};
+
+export const fetchAppOtherApiResponses = async (pmId: number): Promise<any[]> => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/api/pm/${pmId}/app-responses`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching application other API responses:', error);
+    throw error;
+  }
+};
+
+export const importPMData = async (pmId: number, envId: number, serverId: number, custId: number, jsonData: any): Promise<any> => {
+  try {
+    const payload = {
+      ...jsonData,
+      metadata: { pm_id: pmId, env_id: envId, server_id: serverId, cust_id: custId }
+    };
+    const response = await axios.post(`${API_BASE_URL}/api/pm/import/data`, payload, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error importing PM data:', error);
+    throw error;
+  }
+};
+
+export const importAlfrescoApiData = async (pmId: number, custCode: string, jsonData: any[]): Promise<any> => {
+  try {
+    const payload = {
+      pm_id: pmId,
+      cust_code: custCode,
+      jsonData
+    };
+    const response = await axios.post(`${API_BASE_URL}/api/pm/import/alfresco-api`, payload, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error importing Alfresco API data:', error);
+    throw error;
+  }
+};
+
+const api = {
+  fetchPMPlansByCustomer,
+  fetchPMPlans,
+  fetchPMById,
+  fetchCustomerById,
+  fetchPmRound,
+  fetchImportHeader,
+  createPMPlan,
+  updatePMPlan,
+  deletePMPlan,
+  importPM,
+  fetchAlfrescoApiResponses,
+  fetchAppContentSizing,
+  fetchAppOtherApiResponses,
+  importPMData,
+  importAlfrescoApiData
+};
+
+export default api;

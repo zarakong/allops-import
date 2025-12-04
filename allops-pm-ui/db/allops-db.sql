@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS public.app_content_sizing
     pm_id bigint NOT NULL,
     app_size_json text COLLATE pg_catalog."default",
     env_id bigint,
+    "Year_month_file" character varying(7) COLLATE pg_catalog."default",
     CONSTRAINT app_details_pkey PRIMARY KEY (appcont_id)
 );
 
@@ -56,6 +57,9 @@ version workspace (.env)
 COMMENT ON COLUMN public.app_content_sizing.app_size_json
     IS 'json ข้อมูล content sizing ระบบอื่นๆรวมกัน เช่น  postgresql data, solr, joget  
 1 file มีข้อมูล 1 เดือนที่เก็บข้อมูลทุกวัน';
+
+COMMENT ON COLUMN public.app_content_sizing."Year_month_file"
+    IS 'YYYY-MM';
 
 CREATE TABLE IF NOT EXISTS public.app_details
 (
@@ -81,6 +85,16 @@ COMMENT ON COLUMN public.app_details.app_version
 
 COMMENT ON COLUMN public.app_details.app_path
     IS 'Path install application';
+
+CREATE TABLE IF NOT EXISTS public.app_response
+(
+    res_id bigint NOT NULL,
+    pm_id bigint NOT NULL,
+    env_id bigint NOT NULL,
+    json_app_response text COLLATE pg_catalog."default",
+    year_month_file character varying(7) COLLATE pg_catalog."default",
+    CONSTRAINT app_response_pkey PRIMARY KEY (res_id)
+);
 
 CREATE TABLE IF NOT EXISTS public.customer
 (
@@ -114,7 +128,8 @@ CREATE TABLE IF NOT EXISTS public.customer_env
 (
     cust_id bigint NOT NULL,
     env_id bigint NOT NULL,
-    CONSTRAINT customer_env_pkey PRIMARY KEY (cust_id, env_id)
+    server_id bigint NOT NULL DEFAULT 0,
+    CONSTRAINT customer_env_pkey PRIMARY KEY (cust_id, env_id, server_id)
 );
 
 CREATE TABLE IF NOT EXISTS public.env
@@ -122,6 +137,17 @@ CREATE TABLE IF NOT EXISTS public.env
     env_id bigint NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 9223372036854775807 CACHE 1 ),
     env_name character varying(10) COLLATE pg_catalog."default" NOT NULL,
     CONSTRAINT environment_pkey PRIMARY KEY (env_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.pm_checklist
+(
+    checklist_id bigint NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 9223372036854775807 CACHE 1 ),
+    json_pm boolean,
+    json_alfapi boolean,
+    json_api boolean,
+    json_size_data boolean,
+    pm_id bigint NOT NULL,
+    CONSTRAINT pm_checklist_pkey PRIMARY KEY (checklist_id)
 );
 
 CREATE TABLE IF NOT EXISTS public.pm_plan
@@ -133,7 +159,7 @@ CREATE TABLE IF NOT EXISTS public.pm_plan
     remark text COLLATE pg_catalog."default",
     created_at timestamp with time zone,
     pm_year character(4) COLLATE pg_catalog."default" NOT NULL,
-    pm_status boolean NOT NULL DEFAULT true,
+    pm_status boolean NOT NULL DEFAULT false,
     CONSTRAINT pm_pkey PRIMARY KEY (pm_id)
 );
 
@@ -155,24 +181,40 @@ COMMENT ON COLUMN public.pm_plan.pm_year
 CREATE TABLE IF NOT EXISTS public.pm_round
 (
     pm_round_id bigint NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 9223372036854775807 CACHE 1 ),
-    serv_id bigint NOT NULL,
     created_at timestamp with time zone,
-    env_id bigint,
+    env_id bigint NOT NULL,
     json_alf_transact text COLLATE pg_catalog."default",
     json_alf_api_total text COLLATE pg_catalog."default",
     json_alf_api_size text COLLATE pg_catalog."default",
     json_alf_cont_size text COLLATE pg_catalog."default",
+    json_ai_response text COLLATE pg_catalog."default",
+    pm_id bigint NOT NULL,
+    json_workspace text COLLATE pg_catalog."default",
+    json_workspace_path text COLLATE pg_catalog."default",
+    server_id bigint NOT NULL,
     CONSTRAINT details_serv_pkey PRIMARY KEY (pm_round_id)
 );
 
 COMMENT ON TABLE public.pm_round
     IS 'รายละเอียดอื่นๆของการ PM ในรอบนั้นๆ';
 
-COMMENT ON COLUMN public.pm_round.serv_id
-    IS 'ID รอบ PM';
-
 COMMENT ON COLUMN public.pm_round.created_at
     IS 'วันที่กรอกข้อมูล "timestamp"';
+
+COMMENT ON COLUMN public.pm_round.json_alf_transact
+    IS 'transaction alfresco';
+
+COMMENT ON COLUMN public.pm_round.json_alf_api_total
+    IS 'จำนวนไฟล์ทั้งหมดที่ได้จาก API Alfresco';
+
+COMMENT ON COLUMN public.pm_round.json_alf_api_size
+    IS 'ขนาดรวมขนาดไฟล์ทั้งหมดด้วย API Alfresco';
+
+COMMENT ON COLUMN public.pm_round.json_alf_cont_size
+    IS 'จำนวน Contentstore All ของ Alfresco ';
+
+COMMENT ON COLUMN public.pm_round.json_workspace
+    IS 'รายละเอียด Workspace env เช่น version env ';
 
 CREATE TABLE IF NOT EXISTS public.server
 (
@@ -180,14 +222,38 @@ CREATE TABLE IF NOT EXISTS public.server
     env_id bigint NOT NULL,
     pm_id bigint NOT NULL,
     create_at timestamp with time zone NOT NULL,
-    server_spec_json text COLLATE pg_catalog."default",
     cust_id bigint,
     serv_name character varying(200) COLLATE pg_catalog."default",
+    serv_os character varying(100) COLLATE pg_catalog."default",
+    serv_os_version character varying(100) COLLATE pg_catalog."default",
+    serv_ram integer,
+    serv_cpu_model_name character varying(100) COLLATE pg_catalog."default",
+    serv_cpu_cores integer,
+    server_id bigint,
     CONSTRAINT details_server_pkey PRIMARY KEY (serv_id)
 );
 
 COMMENT ON COLUMN public.server.pm_id
     IS 'รายละเอียด server spec แบบ json';
+
+COMMENT ON COLUMN public.server.serv_os
+    IS 'OS';
+
+COMMENT ON COLUMN public.server.serv_os_version
+    IS 'Os version';
+
+COMMENT ON COLUMN public.server.serv_ram
+    IS 'จำนวน RAM';
+
+COMMENT ON COLUMN public.server.serv_cpu_cores
+    IS 'จำนวน core cpu';
+
+CREATE TABLE IF NOT EXISTS public.server_env
+(
+    server_id bigint NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 9223372036854775807 CACHE 1 ),
+    server_name character(200) COLLATE pg_catalog."default",
+    CONSTRAINT server_pkey PRIMARY KEY (server_id)
+);
 
 ALTER TABLE IF EXISTS public.alf_api
     ADD CONSTRAINT alf_api_env_id_fkey FOREIGN KEY (env_id)
@@ -272,14 +338,6 @@ ALTER TABLE IF EXISTS public.pm_plan
 ALTER TABLE IF EXISTS public.pm_round
     ADD CONSTRAINT details_pm_site_env_id_fkey FOREIGN KEY (env_id)
     REFERENCES public.env (env_id) MATCH SIMPLE
-    ON UPDATE NO ACTION
-    ON DELETE NO ACTION
-    NOT VALID;
-
-
-ALTER TABLE IF EXISTS public.pm_round
-    ADD CONSTRAINT details_pm_site_pm_id_fkey FOREIGN KEY (serv_id)
-    REFERENCES public.server (serv_id) MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;

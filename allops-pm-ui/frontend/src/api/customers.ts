@@ -62,6 +62,16 @@ export const fetchCustomerServers = async (id: number): Promise<any[]> => {
   }
 };
 
+export const fetchCustomerEnvs = async (id: number): Promise<Array<{ cust_id: number; env_id: number; env_name: string; server_id: number }>> => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/api/customers/${id}/envs`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching customer envs:', error);
+    throw error;
+  }
+};
+
 export const createCustomerBatch = async (payload: any): Promise<any> => {
   try {
     const response = await axios.post(`${API_BASE_URL}/api/customers/batch`, payload);

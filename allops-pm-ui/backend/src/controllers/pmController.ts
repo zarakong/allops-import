@@ -71,3 +71,390 @@ export const updatePMTask = async (req: Request, res: Response) => {
 export const deletePMTask = async (req: Request, res: Response) => {
   res.status(204).send();
 };
+
+export const getPMById = async (req: Request, res: Response) => {
+  const id = req.params.id;
+  try {
+    const sql = `SELECT p.*, c.cust_name, c.cust_code FROM public.pm_plan p JOIN public.customer c ON p.cust_id = c.cust_id WHERE p.pm_id = $1`;
+    const result = await query(sql, [id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'PM plan not found' });
+    res.status(200).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching pm by id:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Lookup pm_round rows by pm_id + env_id + server_id
+export const getPmRoundByKeys = async (req: Request, res: Response) => {
+  try {
+    const pmId = req.query.pm_id ? Number(req.query.pm_id) : null;
+    const envId = req.query.env_id ? Number(req.query.env_id) : null;
+    const serverId = req.query.server_id ? Number(req.query.server_id) : null;
+
+    if (!pmId || !envId || !serverId) {
+      return res.status(400).json({ error: 'pm_id, env_id and server_id are required' });
+    }
+
+    const sql = `SELECT pr.*, s.serv_name, s.serv_os, s.serv_ram
+      FROM public.pm_round pr
+      LEFT JOIN public.server s ON pr.server_id = s.serv_id
+      WHERE pr.pm_id = $1 AND pr.env_id = $2 AND pr.server_id = $3`;
+    const result = await query(sql, [pmId, envId, serverId]);
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error('Error fetching pm_round by keys:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const importPM = async (req: Request, res: Response) => {
+  try {
+    const payload = req.body;
+    const items = Array.isArray(payload) ? payload : (payload.pm ? (Array.isArray(payload.pm) ? payload.pm : [payload.pm]) : [payload]);
+    const created: number[] = [];
+
+    for (const it of items) {
+      // determine cust_id
+      let custId = it.cust_id ? Number(it.cust_id) : null;
+      if (!custId && it.cust_code) {
+        const r = await query('SELECT cust_id FROM public.customer WHERE cust_code = $1', [it.cust_code]);
+        if (r.rows.length > 0) custId = r.rows[0].cust_id;
+      }
+      if (!custId) {
+        return res.status(400).json({ error: 'Missing cust_id or cust_code for PM import item', item: it });
+      }
+
+      const pm_name = it.pm_name || 'PM';
+      const pm_round = it.pm_round || 1;
+      const pm_year = it.pm_year || (new Date().getFullYear().toString());
+      const pm_status = it.pm_status === true;
+      const createdAt = it.created_at ? new Date(it.created_at) : new Date();
+
+      const r = await query('INSERT INTO pm_plan (cust_id, pm_round, pm_name, remark, created_at, pm_year, pm_status) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING pm_id', [custId, pm_round, pm_name, it.remark || null, createdAt, pm_year, pm_status]);
+      created.push(r.rows[0].pm_id);
+    }
+
+    res.status(201).json({ createdPmIds: created });
+  } catch (error) {
+    console.error('Error importing PMs:', error);
+    res.status(500).json({ error: 'Internal server error', detail: (error as any).message });
+  }
+};
+
+export const getAlfrescoApiResponses = async (req: Request, res: Response) => {
+  try {
+    const pmIdParam = req.params.pmId || req.params.id;
+    const pmId = pmIdParam ? Number(pmIdParam) : null;
+
+    if (!pmId) {
+      return res.status(400).json({ error: 'pm_id is required' });
+    }
+
+    const sql = `SELECT
+        pp.pm_id,
+        pp.pm_name,
+        c.cust_name,
+        aa.env_id,
+        e.env_name,
+        aa.api_date,
+        aa.api_json
+      FROM public.pm_plan AS pp
+      JOIN public.customer AS c ON c.cust_id = pp.cust_id
+      JOIN public.alf_api AS aa ON aa.pm_id = pp.pm_id
+      JOIN public.env AS e ON e.env_id = aa.env_id
+      WHERE pp.pm_id = $1
+      ORDER BY e.env_name ASC, aa.api_date DESC NULLS LAST`;
+
+    const result = await query(sql, [pmId]);
+    return res.status(200).json(result.rows);
+  } catch (error) {
+    console.error('Error fetching Alfresco API responses:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const getAppContentSizingRows = async (req: Request, res: Response) => {
+  try {
+    const pmIdParam = req.params.pmId || req.params.id;
+    const pmId = pmIdParam ? Number(pmIdParam) : null;
+
+    if (!pmId) {
+      return res.status(400).json({ error: 'pm_id is required' });
+    }
+
+    const sql = `SELECT DISTINCT ON (acs.pm_id, acs.env_id, acs."Year_month_file")
+        acs.pm_id,
+        acs.env_id,
+        e.env_name,
+        acs."Year_month_file" AS year_month_file,
+        acs.app_size_json
+      FROM public.app_content_sizing AS acs
+      JOIN public.env AS e ON e.env_id = acs.env_id
+      WHERE acs.pm_id = $1
+      ORDER BY acs.pm_id, acs.env_id, acs."Year_month_file" DESC NULLS LAST`;
+
+    const result = await query(sql, [pmId]);
+    return res.status(200).json(result.rows);
+  } catch (error) {
+    console.error('Error fetching application content sizing:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const getAppResponseRows = async (req: Request, res: Response) => {
+  try {
+    const pmIdParam = req.params.pmId || req.params.id;
+    const pmId = pmIdParam ? Number(pmIdParam) : null;
+
+    if (!pmId) {
+      return res.status(400).json({ error: 'pm_id is required' });
+    }
+
+    const sql = `SELECT DISTINCT ON (ar.pm_id, ar.env_id, ar.year_month_file)
+        ar.pm_id,
+        ar.res_id,
+        ar.env_id,
+        e.env_name,
+        ar.year_month_file,
+        ar.json_app_response,
+        ce.cust_id,
+        ce.server_id AS customer_env_server_id
+      FROM public.app_response AS ar
+      JOIN public.env AS e ON e.env_id = ar.env_id
+      LEFT JOIN public.pm_plan AS pp ON pp.pm_id = ar.pm_id
+      LEFT JOIN public.customer_env AS ce ON ce.cust_id = pp.cust_id AND ce.env_id = ar.env_id
+      WHERE ar.pm_id = $1
+      ORDER BY ar.pm_id, ar.env_id, ar.year_month_file DESC NULLS LAST, ce.server_id NULLS LAST`;
+
+    const result = await query(sql, [pmId]);
+    return res.status(200).json(result.rows);
+  } catch (error) {
+    console.error('Error fetching application response rows:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Consolidated header + status endpoint for Import PM page
+// Returns: header (cust_id, cust_name, cust_code, pm_id, pm_name, pm_year, pm_round)
+// and envs: array of { env_id, env_name, server_id, server_name, has_pm_round }
+export const getImportHeader = async (req: Request, res: Response) => {
+  try {
+    const custId = req.query.cust_id ? Number(req.query.cust_id) : null;
+    const pmId = req.query.pm_id ? Number(req.query.pm_id) : null;
+
+    if (!custId && !pmId) {
+      return res.status(400).json({ error: 'cust_id or pm_id is required' });
+    }
+
+    // If only pmId provided, fetch its cust_id
+    let effectiveCustId = custId;
+    if (!effectiveCustId && pmId) {
+      const r = await query('SELECT cust_id FROM public.pm_plan WHERE pm_id = $1', [pmId]);
+      if (r.rows.length > 0) effectiveCustId = r.rows[0].cust_id;
+    }
+
+    if (!effectiveCustId) return res.status(404).json({ error: 'Customer not found for provided pm_id' });
+
+    // Get header: customer and pm (if pmId provided)
+    const headerSql = `SELECT c.cust_id, c.cust_name, c.cust_code, p.pm_id, p.pm_name, p.pm_year, p.pm_round
+      FROM public.customer c
+      LEFT JOIN public.pm_plan p ON p.pm_id = $2::bigint
+      WHERE c.cust_id = $1::bigint`;
+    const headerRes = await query(headerSql, [effectiveCustId, pmId]);
+    const header = headerRes.rows.length > 0 ? headerRes.rows[0] : null;
+
+    // Get env rows joined with server name and has_pm_round flag
+    // Use EXISTS for efficient check
+    const envSql = `SELECT ce.cust_id, e.env_id, e.env_name, ce.server_id,
+      COALESCE(se.server_name, null) as server_name,
+      CASE WHEN $1::bigint IS NOT NULL AND $2::bigint IS NOT NULL AND EXISTS(
+        SELECT 1 FROM public.pm_round pr WHERE pr.pm_id = $2::bigint AND pr.env_id = ce.env_id AND pr.server_id = ce.server_id
+      ) THEN true ELSE false END AS has_pm_round
+      FROM public.customer_env ce
+      JOIN public.env e ON ce.env_id = e.env_id
+      LEFT JOIN public.server_env se ON ce.server_id = se.server_id
+      WHERE ce.cust_id = $1::bigint
+      ORDER BY e.env_id, ce.server_id`;
+  const envRes = await query(envSql, [effectiveCustId, pmId]);
+
+    res.status(200).json({ header, envs: envRes.rows });
+  } catch (error) {
+    console.error('Error fetching import header:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Import PM data from JSON payload
+export const importPMData = async (req: Request, res: Response) => {
+  try {
+    const payload = req.body;
+    const { pm_id, env_id, server_id, cust_id } = req.body.metadata || {};
+
+    if (!pm_id || !env_id || !server_id) {
+      return res.status(400).json({ error: 'pm_id, env_id, and server_id are required in metadata' });
+    }
+
+    // Validate customer and env match
+    const custName = payload.customer;
+    const envName = payload.env;
+
+    // Verify customer name matches
+    const custCheck = await query('SELECT c.cust_id, c.cust_name FROM public.customer c JOIN public.pm_plan p ON p.cust_id = c.cust_id WHERE p.pm_id = $1', [pm_id]);
+    if (custCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'PM plan not found' });
+    }
+    
+    const dbCustName = custCheck.rows[0].cust_name?.toLowerCase().trim();
+    const payloadCustName = custName?.toLowerCase().trim();
+    if (dbCustName !== payloadCustName) {
+      return res.status(400).json({ error: `Customer name mismatch. Expected: ${custCheck.rows[0].cust_name}, Got: ${custName}` });
+    }
+
+    // Verify env name matches
+    const envCheck = await query('SELECT env_id, env_name FROM public.env WHERE env_id = $1', [env_id]);
+    if (envCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Environment not found' });
+    }
+
+    const dbEnvName = envCheck.rows[0].env_name?.toLowerCase().trim();
+    const payloadEnvName = envName?.toLowerCase().trim();
+    if (dbEnvName !== payloadEnvName) {
+      return res.status(400).json({ error: `Environment name mismatch. Expected: ${envCheck.rows[0].env_name}, Got: ${envName}` });
+    }
+
+    await query('BEGIN');
+
+    const timestamp = payload.timestamp || new Date().toISOString();
+    const datecheck = payload.datecheck || new Date().toISOString().slice(0, 10);
+
+    // 1. Insert/Update server
+    const serverSpec = payload.server_spec || {};
+    const servName = serverSpec.hostname || 'unknown';
+    const servOs = serverSpec.os?.name || null;
+    const servOsVersion = serverSpec.os?.version || null;
+    const servRam = serverSpec.memory?.total_kb || null;
+    const servCpuModel = serverSpec.cpu_model_name || null;
+    const servCpuCores = serverSpec.cpu?.cores || null;
+
+    const serverInsert = await query(
+      `INSERT INTO public.server (env_id, pm_id, create_at, cust_id, serv_name, serv_os, serv_os_version, serv_ram, serv_cpu_model_name, serv_cpu_cores, server_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING serv_id`,
+      [env_id, pm_id, timestamp, cust_id, servName, servOs, servOsVersion, servRam, servCpuModel, servCpuCores, server_id]
+    );
+    const servId = serverInsert.rows[0].serv_id;
+
+    // 2. Insert alf_contentstore
+    const storages = payload.storages?.contentstore || {};
+    const contAllKb = storages.summary_kb || null;
+    const contYearJson = JSON.stringify(storages.Alf_conternt_year || []);
+    const contMonthJson = JSON.stringify(storages.alf_last_12_months || []);
+    // Keep workspace_env as-is with \n separators
+    const alfVersionJson = payload.workspace_env || null;
+
+    await query(
+      `INSERT INTO public.alf_contentstore (pm_id, cont_all_kb, created_at, cont_year_json, cont_month_json, env_id, alf_version_json)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [pm_id, contAllKb, timestamp, contYearJson, contMonthJson, env_id, alfVersionJson]
+    );
+
+    // 3. Insert pm_round
+    const alfresco = payload.alfresco || {};
+    const transactions = payload.transactions || [];
+    
+    // Store only numeric values as JSON
+    const jsonAlfApiTotal = alfresco.total_files || null;
+    const jsonAlfApiSize = alfresco.total_bytes || null;
+    const jsonAlfContSize = alfresco.total_mb || null;
+    const jsonAlfTransact = JSON.stringify(transactions);
+    const jsonWorkspace = payload.workspace_env || null;
+    const jsonWorkspacePath = payload.env_workspace || null;
+
+    await query(
+      `INSERT INTO public.pm_round (created_at, env_id, json_alf_transact, json_alf_api_total, json_alf_api_size, json_alf_cont_size, pm_id, json_workspace, json_workspace_path, server_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [timestamp, env_id, jsonAlfTransact, jsonAlfApiTotal, jsonAlfApiSize, jsonAlfContSize, pm_id, jsonWorkspace, jsonWorkspacePath, server_id]
+    );
+
+    await query('COMMIT');
+
+    res.status(201).json({ success: true, message: 'PM data imported successfully', serv_id: servId });
+  } catch (error) {
+    await query('ROLLBACK');
+    console.error('Error importing PM data:', error);
+    res.status(500).json({ error: 'Internal server error', detail: (error as any).message });
+  }
+};
+
+export const importAlfrescoApiData = async (req: Request, res: Response) => {
+  try {
+    const { pm_id, cust_code, jsonData } = req.body;
+
+    if (!pm_id || !cust_code || !jsonData || !Array.isArray(jsonData)) {
+      return res.status(400).json({ error: 'pm_id, cust_code, and jsonData (array) are required' });
+    }
+
+    // Validate first row for customer and env
+    const firstRow = jsonData[0];
+    if (!firstRow || !firstRow.customer || !firstRow.env) {
+      return res.status(400).json({ error: 'First row must contain customer and env fields' });
+    }
+
+    // Validate customer code
+    const customerCheck = await query(
+      'SELECT cust_id FROM public.customer WHERE LOWER(cust_code) = LOWER($1)',
+      [firstRow.customer]
+    );
+
+    if (customerCheck.rows.length === 0) {
+      return res.status(400).json({ error: `Customer code "${firstRow.customer}" not found` });
+    }
+
+    const custId = customerCheck.rows[0].cust_id;
+
+    // Validate if customer has this cust_code
+    if (firstRow.customer.toLowerCase() !== cust_code.toLowerCase()) {
+      return res.status(400).json({ 
+        error: `Customer code mismatch. Expected: ${cust_code}, Got: ${firstRow.customer}` 
+      });
+    }
+
+    // Validate env exists for this customer
+    const envCheck = await query(
+      `SELECT e.env_id FROM public.env e
+       JOIN public.customer_env ce ON ce.env_id = e.env_id
+       WHERE ce.cust_id = $1 AND LOWER(e.env_name) = LOWER($2)`,
+      [custId, firstRow.env]
+    );
+
+    if (envCheck.rows.length === 0) {
+      return res.status(400).json({ 
+        error: `Environment "${firstRow.env}" not found for customer "${cust_code}"` 
+      });
+    }
+
+    const envId = envCheck.rows[0].env_id;
+
+    // Get the date from the last row (support both 'date' and 'datetime' fields)
+    const lastRow = jsonData[jsonData.length - 1];
+    let apiDate = lastRow.date || lastRow.datetime || null;
+    
+    // If datetime is in ISO format, extract just the date part
+    if (apiDate && typeof apiDate === 'string' && apiDate.includes('T')) {
+      apiDate = apiDate.split('T')[0];
+    }
+
+    // Insert into alf_api table
+    await query(
+      `INSERT INTO public.alf_api (pm_id, env_id, api_json, api_date)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT DO NOTHING`,
+      [pm_id, envId, JSON.stringify(jsonData), apiDate]
+    );
+
+    return res.status(200).json({ message: 'Alfresco API data imported successfully' });
+  } catch (error) {
+    console.error('Error importing Alfresco API data:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};

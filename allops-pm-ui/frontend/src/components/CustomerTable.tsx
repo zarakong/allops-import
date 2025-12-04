@@ -138,13 +138,17 @@ const CustomerTable: React.FC = () => {
                                     </td>
                                 </tr>
                             ) : (
-                                filteredCustomers.map(customer => (
-                                    <tr key={customer.id}>
+                                filteredCustomers.map((customer, index) => {
+                                    const custIdValue = (customer as any).cust_id ?? customer.id;
+                                    const createdAt = customer.created_at ? new Date(customer.created_at).toLocaleDateString('th-TH') : '-';
+                                    return (
+                                    <tr key={custIdValue ?? `${customer.cust_code || 'row'}-${index}`}>
                                         <td>
                                             <div className="table-actions">
                                                 <button
                                                     className="btn btn-sm btn-secondary"
-                                                    onClick={() => handleEdit(customer.id)}
+                                                    disabled={!custIdValue}
+                                                    onClick={() => custIdValue && handleEdit(custIdValue)}
                                                     title="รายละเอียด"
                                                 >
                                                     <EditIcon />
@@ -152,7 +156,8 @@ const CustomerTable: React.FC = () => {
                                                 </button>
                                                 <button 
                                                     className="btn btn-sm btn-primary" 
-                                                    onClick={() => handlePMPlan(customer.id)}
+                                                    disabled={!custIdValue}
+                                                    onClick={() => custIdValue && handlePMPlan(custIdValue)}
                                                     title="จัดการแผน PM"
                                                 >
                                                     <CalendarIcon />
@@ -170,14 +175,15 @@ const CustomerTable: React.FC = () => {
                                         </td>
                                         <td>{(customer as any).env_name || '-'}</td>
                                         <td>{customer.project_name || customer.cust_desc || (customer as any).remark || '-'}</td>
-                                        <td>{new Date(customer.created_at).toLocaleDateString('th-TH')}</td>
+                                            <td>{createdAt}</td>
                                         <td>
                                             <span style={{ color: customer.status ? 'green' : 'red', fontWeight: 600 }}>
                                                 {customer.status ? 'Support' : 'END Support'}
                                             </span>
                                         </td>
                                     </tr>
-                                ))
+                                );
+                                })
                             )}
                         </tbody>
                     </table>

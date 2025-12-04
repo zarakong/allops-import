@@ -111,29 +111,29 @@ export const getCustomerById = async (req: Request, res: Response) => {
     }
 };
 
-// Get servers for a specific customer (return latest record per env_id+pm_id+cust_id)
+// Get servers for a specific customer (return latest record per env_id+pm_id+cust_id+server_id)
 export const getCustomerServers = async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
         const sql = `
-SELECT s.serv_id, s.env_id, e.env_name, s.pm_id, s.create_at, s.server_spec_json, s.cust_id
+SELECT s.serv_id, s.env_id, e.env_name, s.pm_id, s.create_at, s.cust_id,
+       s.serv_name, s.serv_os, s.serv_os_version, s.serv_ram, 
+       s.serv_cpu_model_name, s.serv_cpu_cores, s.server_id,
+       se.server_name
 FROM public.server s
 LEFT JOIN public.env e ON e.env_id = s.env_id
+LEFT JOIN public.server_env se ON se.server_id = s.server_id
 JOIN (
-  SELECT env_id, pm_id, cust_id, MAX(create_at) AS max_created
+  SELECT env_id, pm_id, cust_id, server_id, MAX(create_at) AS max_created
   FROM public.server
   WHERE cust_id = $1
-  GROUP BY env_id, pm_id, cust_id
-) recent ON s.env_id = recent.env_id AND s.pm_id = recent.pm_id AND s.cust_id = recent.cust_id AND s.create_at = recent.max_created
+  GROUP BY env_id, pm_id, cust_id, server_id
+) recent ON s.env_id = recent.env_id AND s.pm_id = recent.pm_id AND s.cust_id = recent.cust_id AND s.server_id = recent.server_id AND s.create_at = recent.max_created
 WHERE s.cust_id = $1
-ORDER BY s.serv_id;
+ORDER BY s.env_id, s.server_id;
         `;
-    const result = await query(sql, [id]);
-    console.log('getCustomerServers result keys:', Object.keys(result || {}));
-    // debug: log rowCount and rows length
-    try { console.log('getCustomerServers rowCount=', (result as any).rowCount); } catch (e) {}
-    try { console.log('getCustomerServers rows length=', Array.isArray((result as any).rows) ? (result as any).rows.length : typeof (result as any).rows); } catch (e) {}
-    res.status(200).json(result.rows);
+        const result = await query(sql, [id]);
+        res.status(200).json(result.rows);
     } catch (error) {
         console.error('Error fetching customer servers:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -295,6 +295,29 @@ export const getAllAppDetails = async (_req: Request, res: Response) => {
         res.status(200).json(result.rows);
     } catch (error) {
         console.error('Error fetching app_details:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+// Get customer_env rows (envs + server_id) for a specific customer
+export const getCustomerEnvs = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    try {
+        const sql = `
+SELECT
+  ce.cust_id,
+  e.env_id,
+  e.env_name,
+  ce.server_id
+FROM public.customer_env ce
+JOIN public.env e ON ce.env_id = e.env_id
+WHERE ce.cust_id = $1
+ORDER BY e.env_id, ce.server_id
+        `;
+        const result = await query(sql, [id]);
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error('Error fetching customer envs:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 };

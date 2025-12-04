@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PM Import Data Status</title>
+    <!-- โหลด Tailwind CSS CDN --><script src="https://cdn.tailwindcss.com"></script>
+    <!-- กำหนดค่าเริ่มต้นของ Tailwind และใช้ฟอนต์ Inter --><script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Tahoma', 'sans-serif'],
+                    },
+                    colors: {
+                        'primary': '#4f46e5',
+                        'success': '#10b981',
+                        'info': '#3b82f6',
+                        'yellow-border': '#fbbf24', // Yellow-400 for the outer border
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* สไตล์กำหนดความกว้างของตารางให้เต็มพื้นที่และจัดกึ่งกลาง */
+        .data-table th, .data-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e5e7eb; /* Gray-200 */
+            border-right: 1px solid #e5e7eb;
+        }
+
+        .data-table th:last-child, .data-table td:last-child {
+            border-right: none;
+        }
+
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .header-bg {
+            background-color: #06b6d4; /* Cyan-500, ใกล้เคียงสีฟ้าในรูป */
+        }
+    </style>
+</head>
+<body class="bg-white font-sans p-4 sm:p-12">
+
+    <!-- Header Section (Top Text) --><header class="mb-10">
+        <h1 class="text-4xl font-light text-gray-900 mb-1">PM Import data</h1>
+        <p class="text-xl text-gray-700">NBTC - DMS PM:2025 รอบ PM:1</p>
+    </header>
+
+    <!-- Main Content Card (PM Section) --><!-- FIX: เปลี่ยนสี border จาก border-lime-green เป็น border-yellow-border --><div class="border-4 border-yellow-border p-6 sm:p-8 rounded-lg shadow-xl max-w-4xl mx-auto">
+        
+        <h2 class="text-3xl font-normal text-gray-900 mb-6">PM</h2>
+
+        <!-- Data Status Table --><div class="overflow-x-auto rounded-lg border border-gray-300">
+            <table class="w-full data-table text-left border-collapse">
+                
+                <!-- Table Header --><thead>
+                    <tr class="text-white header-bg">
+                        <th class="font-semibold uppercase text-sm w-1/5 rounded-tl-lg">ENV</th>
+                        <th class="font-semibold uppercase text-sm w-3/5">Server</th>
+                        <!-- FIX: เปลี่ยนหัวข้อคอลัมน์จาก 'Data import' เป็น 'Status' -->
+                        <th class="font-semibold uppercase text-sm w-1/5 rounded-tr-lg">Status</th>
+                    </tr>
+                </thead>
+                
+                <!-- Table Body --><tbody>
+                    <!-- Row 1: UAT / DDS-UAT / Success --><tr class="bg-white hover:bg-gray-50 transition duration-150">
+                        <td class="text-gray-700">UAT</td>
+                        <td class="text-gray-700">DDS-UAT</td>
+                        <td class="text-success font-semibold">Success</td>
+                    </tr>
+                    
+                    <!-- Row 2: UAT / DDS-UAT-DB / Success --><tr class="bg-white hover:bg-gray-50 transition duration-150">
+                        <td class="text-gray-700">UAT</td>
+                        <td class="text-gray-700">DDS-UAT-DB</td>
+                        <td class="text-success font-semibold">Success</td>
+                    </tr>
+                    
+                    <!-- Row 3: PROD / DDS-PRD / Success --><tr class="bg-white hover:bg-gray-50 transition duration-150">
+                        <td class="text-gray-700">PROD</td>
+                        <td class="text-gray-700">DDS-PRD</td>
+                        <td class="text-success font-semibold">Success</td>
+                    </tr>
+                    
+                    <!-- Row 4: PROD / DDS-PRD-DB / Buttons --><tr class="bg-white hover:bg-gray-50 transition duration-150">
+                        <td class="text-gray-700">PROD</td>
+                        <td class="text-gray-700">DDS-PRD-DB</td>
+                        <td class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 justify-end">
+                            <!-- Import CSV Button --><button class="bg-info hover:bg-blue-700 text-white text-xs py-1.5 px-3 rounded-md transition duration-150 ease-in-out shadow-sm whitespace-nowrap">
+                                import csv
+                            </button>
+                            <!-- Upload Button --><button class="bg-success hover:bg-green-700 text-white text-xs py-1.5 px-3 rounded-md transition duration-150 ease-in-out shadow-sm whitespace-nowrap">
+                                upload
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <!-- End of Data Status Table --></div>
+    <!-- End of Main Content Card --><script>
+        // Placeholder for any interactive JavaScript if needed later.
+        // For now, the buttons do not have specific functionality defined.
+    </script>
+</body>
+</html>

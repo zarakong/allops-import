@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { fetchPMPlansByCustomer, fetchCustomerById } from '../api/pm';
 import PMPlanModal from '../components/PMPlanModal';
 
@@ -14,7 +14,7 @@ const TaskPM: React.FC = () => {
     const [searchInputYear, setSearchInputYear] = useState<string>('');
     const [searchTermYear, setSearchTermYear] = useState<string>('');
     const [modalOpen, setModalOpen] = useState<boolean>(false);
-    const [selectedPlan, setSelectedPlan] = useState<any | null>(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         const load = async () => {
@@ -48,9 +48,8 @@ const TaskPM: React.FC = () => {
     }, [custId, searchTermCustomer, searchTermYear]);
 
     const handleEdit = (pmId: number) => {
-        const plan = plans.find(p => Number(p.pm_id) === Number(pmId));
-        setSelectedPlan(plan || null);
-        setModalOpen(true);
+        // navigate to PM Details page
+        navigate(`/pm/${pmId}`);
     };
 
     const handleSaved = (savedPlan: any) => {
@@ -97,7 +96,7 @@ const TaskPM: React.FC = () => {
                                 แสดงผลจากทุกปี — เลือกปีเพื่อกรองเฉพาะปีนั้น
                             </div>
                         )}
-                        <PMPlanModal isOpen={modalOpen} onRequestClose={() => setModalOpen(false)} plan={selectedPlan} onSaved={handleSaved} />
+                        <PMPlanModal isOpen={modalOpen} onRequestClose={() => setModalOpen(false)} plan={null} onSaved={handleSaved} />
                     </div>
                     {loading ? (
                         <div>Loading...</div>
@@ -121,9 +120,26 @@ const TaskPM: React.FC = () => {
                                     ) : (
                                         plans.map(plan => (
                                             <tr key={plan.pm_id}>
-                                                <td>
-                                                    <button className="btn btn-sm btn-secondary" onClick={() => handleEdit(plan.pm_id)}>
+                                                <td style={{ display: 'flex', gap: 8 }}>
+                                                    <button className="btn btn-sm btn-secondary" onClick={() => handleEdit(plan.pm_id)} title="Edit PM">
                                                         ✎
+                                                    </button>
+                                                    <button className="btn btn-sm btn-outline" onClick={() => {
+                                                        const targetCust = plan.cust_id || customer?.cust_id || custId;
+                                                        const query = new URLSearchParams();
+                                                        if (targetCust) query.set('custId', String(targetCust));
+                                                        const resolvedCustName = plan.cust_name || customer?.cust_name;
+                                                        const resolvedCustCode = plan.cust_code || customer?.cust_code;
+                                                        if (resolvedCustName) query.set('cust_name', resolvedCustName);
+                                                        if (resolvedCustCode) query.set('cust_code', resolvedCustCode);
+                                                        if (plan.pm_id) query.set('pm_id', String(plan.pm_id));
+                                                        if (plan.pm_name) query.set('pm_name', plan.pm_name);
+                                                        if (plan.pm_year) query.set('pm_year', String(plan.pm_year));
+                                                        if (plan.pm_round) query.set('pm_round', String(plan.pm_round));
+                                                        const qs = query.toString();
+                                                        navigate(`/pm/import${qs ? `?${qs}` : ''}`);
+                                                    }} title="Import PM JSON">
+                                                        ⤓
                                                     </button>
                                                 </td>
                                                 <td>{plan.cust_code || customer?.cust_code || '-'}</td>

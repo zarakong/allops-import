@@ -9,11 +9,7 @@ type CustomerDraft = {
   cust_desc: string;
 };
 
-type EnvEntry = {
-  id: number;
-  env_name: string;
-  customer_env_flags: string[]; // checklist values
-};
+// EnvEntry type removed (not used) to avoid lint warning
 
 type AppEntry = {
   id: number;
