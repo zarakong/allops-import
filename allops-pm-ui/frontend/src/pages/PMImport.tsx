@@ -332,7 +332,6 @@ const PMImport: React.FC = () => {
 
   const titleCustomerName = pickDisplayValue([header.cust_name, custNameParam], '');
   const displayCustId = pickDisplayValue([header.cust_id, preCustId], '#{cust_id}');
-  const displayCustCode = pickDisplayValue([header.cust_code, custCodeParam], '{cust_code}');
   const displayCustName = pickDisplayValue([header.cust_name, custNameParam], '{cust_name}');
   const displayPmId = pickDisplayValue([header.pm_id, pmIdParam], 'PM_id');
   const displayPmName = pickDisplayValue([header.pm_name, pmNameParam], '{pm_name}');

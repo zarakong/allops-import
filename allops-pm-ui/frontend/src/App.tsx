@@ -9,6 +9,7 @@ import TaskPM from './pages/TaskPM';
 import UploadPM from './pages/UploadPM';
 import PMImport from './pages/PMImport';
 import PMDetails from './pages/PMDetails';
+import NewServer from './pages/NewServer';
 import './index.css';
 
 const App: React.FC = () => {
@@ -24,6 +25,7 @@ const App: React.FC = () => {
               <Route path="/customer/:id" element={<CustomerDetail />} />
             <Route path="/task-pm" element={<TaskPM />} />
             <Route path="/task-pm/:custId" element={<TaskPM />} />
+            <Route path="/customer/:id/new-server" element={<NewServer />} />
             <Route path="/pm/:pmId" element={<PMDetails />} />
             <Route path="/pm/import" element={<PMImport />} />
             <Route path="/upload-pm" element={<UploadPM />} />

@@ -245,7 +245,8 @@ export const createCustomerBatch = async (req: Request, res: Response) => {
                     // DB schema updated: app_details.serv_id is nullable and FK removed.
                     // Instead of creating a server placeholder, insert app_details with serv_id = NULL
                     for (const appEntry of appsByEnv[envId]) {
-                        await query('INSERT INTO app_details (pm_id, serv_id, app_name, created_at) VALUES ($1, $2, $3, now())', [firstPmId, null, appEntry.app_name]);
+                        // Some DB schemas don't have serv_id column in app_details. Insert without serv_id to be compatible.
+                        await query('INSERT INTO app_details (pm_id, app_name, created_at) VALUES ($1, $2, now())', [firstPmId, appEntry.app_name]);
                     }
                 }
         }
@@ -306,18 +307,102 @@ export const getCustomerEnvs = async (req: Request, res: Response) => {
         const sql = `
 SELECT
   ce.cust_id,
-  e.env_id,
-  e.env_name,
-  ce.server_id
+    e.env_id,
+    e.env_name,
+    ce.server_id,
+    COALESCE(TRIM(se.server_name), '') AS server_name
 FROM public.customer_env ce
 JOIN public.env e ON ce.env_id = e.env_id
+LEFT JOIN public.server_env se ON se.server_id = ce.server_id
 WHERE ce.cust_id = $1
-ORDER BY e.env_id, ce.server_id
+    AND ce.server_id > 0
+ORDER BY e.env_name, se.server_name, ce.server_id
         `;
         const result = await query(sql, [id]);
         res.status(200).json(result.rows);
     } catch (error) {
         console.error('Error fetching customer envs:', error);
         res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+export const getCustomerWorkspaceDetails = async (req: Request, res: Response) => {
+        const { id } = req.params;
+        try {
+                const sql = `
+WITH env_list AS (
+    SELECT DISTINCT ce.cust_id, e.env_id, e.env_name
+    FROM public.customer_env ce
+    JOIN public.env e ON e.env_id = ce.env_id
+    WHERE ce.cust_id = $1
+        AND ce.server_id > 0
+)
+SELECT
+    env_list.env_id,
+    env_list.env_name,
+    pr_data.workspace_text,
+    pr_data.workspace_date
+FROM env_list
+LEFT JOIN LATERAL (
+    SELECT
+        pr.json_workspace AS workspace_text,
+        to_char(pr.created_at::date, 'YYYY-MM-DD') AS workspace_date
+    FROM public.pm_round pr
+    JOIN public.pm_plan pp ON pp.pm_id = pr.pm_id
+    WHERE pp.cust_id = env_list.cust_id
+        AND pr.env_id = env_list.env_id
+    ORDER BY pr.created_at DESC NULLS LAST
+    LIMIT 1
+) pr_data ON TRUE
+ORDER BY env_list.env_name;
+                `;
+                const result = await query(sql, [id]);
+                res.status(200).json(result.rows);
+        } catch (error) {
+                console.error('Error fetching customer workspace details:', error);
+                res.status(500).json({ error: 'Internal server error' });
+        }
+};
+
+// Add server_env rows and link to customer_env for a specific customer
+export const addCustomerServerEnvs = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { entries } = req.body || {};
+    if (!id) return res.status(400).json({ error: 'Missing customer id' });
+    if (!Array.isArray(entries) || entries.length === 0) return res.status(400).json({ error: 'Missing entries' });
+
+    try {
+        await query('BEGIN');
+        const created: Array<any> = [];
+        for (const e of entries) {
+            const envId = Number(e.env_id);
+            // Trim whitespace from incoming server name and enforce max length
+            const serverNameRaw = (e.server_name || '').toString();
+            const serverName = serverNameRaw.trim().slice(0, 200);
+            if (!envId || !serverName) continue;
+            // Validation: ensure server_name is unique per env (check existing server linked to same env)
+            const existingCheckSql = `SELECT se.server_id FROM public.server_env se JOIN public.customer_env ce ON ce.server_id = se.server_id WHERE se.server_name = $1 AND ce.env_id = $2 LIMIT 1`;
+            const existRes = await query(existingCheckSql, [serverName, envId]);
+            if (existRes.rows && existRes.rows.length > 0) {
+                // already exists for this env - return existing server_id
+                const existingServerId = existRes.rows[0].server_id;
+                created.push({ env_id: envId, server_id: existingServerId, server_name: serverName, existing: true });
+                continue;
+            }
+
+            // insert into server_env and return server_id
+            const r = await query('INSERT INTO server_env (server_name) VALUES ($1) RETURNING server_id', [serverName]);
+            const serverId = r.rows[0].server_id;
+            // link to customer_env (cust_id, env_id, server_id) - avoid duplicates
+            await query('INSERT INTO customer_env (cust_id, env_id, server_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING', [id, envId, serverId]);
+            created.push({ env_id: envId, server_id: serverId, server_name: serverName, existing: false });
+        }
+        await query('COMMIT');
+        console.log('addCustomerServerEnvs created=', created);
+        res.status(201).json({ created });
+    } catch (error) {
+        console.error('Error adding customer server envs:', error);
+        try { await query('ROLLBACK'); } catch (e) { console.error('Rollback error', e); }
+        res.status(500).json({ error: 'Internal server error', detail: (error as any).message });
     }
 };

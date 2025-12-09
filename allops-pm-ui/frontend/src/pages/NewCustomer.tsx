@@ -37,12 +37,12 @@ const NewCustomer: React.FC = () => {
   const [envOptions, setEnvOptions] = useState<Array<{ id: number; env_name: string }>>([]);
 
   const [apps, setApps] = useState<AppEntry[]>([]);
-  const [appCounter, setAppCounter] = useState(1);
-  const [appEntryEnv, setAppEntryEnv] = useState<number | ''>('');
-  const [appNameInput, setAppNameInput] = useState<string>('');
 
   const [pmRows, setPmRows] = useState<PMRow[]>([]);
   const [pmCounter, setPmCounter] = useState(1);
+  const [pmNameInput, setPmNameInput] = useState<string>('');
+  const [pmYearInput, setPmYearInput] = useState<number | ''>('');
+  const [pmRoundInput, setPmRoundInput] = useState<number>(1);
 
   // Details Customer -> add temp
   const handleAddCustomer = () => {
@@ -61,7 +61,6 @@ const NewCustomer: React.FC = () => {
       // if env was deselected, remove any apps associated with that env
       if (exists) {
         setApps(prevApps => prevApps.filter(a => a.env_id !== optId));
-        if (appEntryEnv === optId) setAppEntryEnv('');
       }
       return next;
     });
@@ -75,23 +74,14 @@ const NewCustomer: React.FC = () => {
   // Note: envs are selected from existing envOptions and saved as customer_env on final save.
   // selectedEnvChecks contains selected env names.
 
-  // App handling
-  const handleAddApp = (envId: number, appName: string) => {
-    if (!envId || !appName) {
-      alert('กรุณาเลือก env และกรอกชื่อโปรแกรม');
-      return;
-    }
-    const entry: AppEntry = { id: appCounter, env_id: envId, app_name: appName };
-    setApps(prev => [...prev, entry]);
-    setAppCounter(c => c + 1);
-  };
-
-  const handleRemoveApp = (id: number) => setApps(prev => prev.filter(a => a.id !== id));
-
   // PM handling
   const handleCreatePmRows = (pm_name: string, pm_year: number | '', pm_round: number) => {
     if (!pm_name || !pm_year || !pm_round) {
       alert('กรุณากรอกข้อมูล PM Name, Year และ Round');
+      return;
+    }
+    if (pm_round < 1) {
+      alert('จำนวนรอบต้องไม่น้อยกว่า 1');
       return;
     }
     const newRows: PMRow[] = Array.from({ length: pm_round }).map((_, idx) => ({
@@ -115,10 +105,20 @@ const NewCustomer: React.FC = () => {
     const ok = window.confirm('ยืนยันการบันทึกข้อมูลลูกค้าและรายการที่เกี่ยวข้องหรือไม่?');
     if (!ok) return;
 
-  const envsPayload = selectedEnvChecks.map(id => ({ env_id: id }));
-  // convert apps to payload format { env_id, app_name }
-  const appsPayload = apps.map(a => ({ env_id: a.env_id, app_name: a.app_name }));
-  const payload = { customer, envs: envsPayload, apps: appsPayload, pmRows };
+    if (selectedEnvChecks.length === 0) {
+      alert('กรุณาเลือก Environment อย่างน้อย 1 รายการก่อนบันทึก');
+      return;
+    }
+
+    if (pmRows.length === 0) {
+      alert('กรุณากด Create PM เพื่อเพิ่ม PM Plan ก่อนบันทึก');
+      return;
+    }
+
+    const envsPayload = selectedEnvChecks.map(id => ({ env_id: id }));
+    // convert apps to payload format { env_id, app_name }
+    const appsPayload = apps.map(a => ({ env_id: a.env_id, app_name: a.app_name }));
+    const payload = { customer, envs: envsPayload, apps: appsPayload, pmRows };
 
     // call backend batch endpoint
     createCustomerBatch(payload)
@@ -136,40 +136,40 @@ const NewCustomer: React.FC = () => {
   return (
     <div className="card">
       <div className="card-header">
-        <h3 className="card-title">New Customer</h3>
-        <p className="card-subtitle">สร้างลูกค้าใหม่ — กรอกข้อมูลทีละขั้นตอน</p>
+        <h3 className="card-title">สร้างลูกค้าใหม่</h3>
+        <p className="card-subtitle">กรอกข้อมูลลูกค้าและข้อมูลที่เกี่ยวข้อง (Env, Application, PM)</p>
       </div>
 
       <div className="card-body">
         {/* Details Customer */}
-        <section style={{ marginBottom: 'var(--space-6)' }}>
-          <h2>Details Customer</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <div>
-              <label>ชื่อลูกค้า <span style={{ color: 'var(--error-500)' }}>*</span></label>
-              <input value={customer.cust_name} onChange={e => setCustomer({ ...customer, cust_name: e.target.value })} />
+        <section style={{ marginBottom: '1.25rem' }}>
+          <h4 style={{ marginBottom: '0.5rem' }}>รายละเอียดลูกค้า</h4>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div className="form-group">
+              <label className="form-label">ชื่อลูกค้า <span style={{ color: '#b91c1c' }}>*</span></label>
+              <input className="form-control" placeholder="ชื่อเต็มของลูกค้า" value={customer.cust_name} onChange={e => setCustomer({ ...customer, cust_name: e.target.value })} />
             </div>
-            <div>
-              <label>คำย่อลูกค้า <span style={{ color: 'var(--error-500)' }}>*</span></label>
-              <input value={customer.cust_code} onChange={e => setCustomer({ ...customer, cust_code: e.target.value })} />
+            <div className="form-group">
+              <label className="form-label">คำย่อลูกค้า <span style={{ color: '#b91c1c' }}>*</span></label>
+              <input className="form-control" placeholder="ตัวอย่าง: DDS" value={customer.cust_code} onChange={e => setCustomer({ ...customer, cust_code: e.target.value })} />
             </div>
-            <div>
-              <label>ชื่อโครงการ</label>
-              <input value={customer.project_name} onChange={e => setCustomer({ ...customer, project_name: e.target.value })} />
+            <div className="form-group">
+              <label className="form-label">ชื่อโครงการ</label>
+              <input className="form-control" placeholder="ชื่อโครงการ (ถ้ามี)" value={customer.project_name} onChange={e => setCustomer({ ...customer, project_name: e.target.value })} />
             </div>
-            <div>
-              <label>รายละเอียด อื่นๆ</label>
-              <input value={customer.cust_desc} onChange={e => setCustomer({ ...customer, cust_desc: e.target.value })} />
+            <div className="form-group">
+              <label className="form-label">รายละเอียดเพิ่มเติม</label>
+              <input className="form-control" placeholder="คำอธิบายสั้น ๆ" value={customer.cust_desc} onChange={e => setCustomer({ ...customer, cust_desc: e.target.value })} />
             </div>
           </div>
-          <div style={{ marginTop: 'var(--space-4)' }}>
-            <button className="btn btn-primary" onClick={handleAddCustomer}>add customer</button>
+          <div style={{ marginTop: '0.75rem' }}>
+            <button className="btn btn-primary" onClick={handleAddCustomer}>บันทึกข้อมูลลูกค้า (ขั้นตอน 1)</button>
           </div>
         </section>
 
         {/* Env Section (display only after add customer) */}
-        <section style={{ marginBottom: 'var(--space-6)' }}>
-          <h2>Env</h2>
+        <section style={{ marginBottom: '1.25rem' }}>
+          <h4 style={{ marginBottom: '0.5rem' }}>Environment (Env)</h4>
           {!customerAdded && <div style={{ color: 'var(--gray-500)' }}>กรุณากด "add customer" ก่อนเพื่อเริ่มเพิ่ม Env</div>}
           {customerAdded && (
             <div>
@@ -189,7 +189,7 @@ const NewCustomer: React.FC = () => {
                   <thead>
                     <tr>
                       <th>Env</th>
-                      <th>Actions</th>
+                      <th style={{ width: 120 }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -200,13 +200,13 @@ const NewCustomer: React.FC = () => {
                         <tr key={id}>
                           <td>{name}</td>
                           <td>
-                            <button className="btn btn-sm btn-danger" onClick={() => toggleEnvOption(id)}>Remove</button>
+                            <button className="btn btn-sm btn-danger" onClick={() => toggleEnvOption(id)}>ลบ</button>
                           </td>
                         </tr>
                       );
                     })}
                     {selectedEnvChecks.length === 0 && (
-                      <tr><td colSpan={2} style={{ textAlign: 'center', padding: 'var(--space-6)' }}>ยังไม่มี Env</td></tr>
+                      <tr><td colSpan={2} style={{ textAlign: 'center', padding: '1rem' }}>ยังไม่มี Env</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -215,98 +215,58 @@ const NewCustomer: React.FC = () => {
           )}
         </section>
 
-        {/* Application Section */}
-        <section style={{ marginBottom: 'var(--space-6)' }}>
-          <h2>Application</h2>
-          {!customerAdded && <div style={{ color: 'var(--gray-500)' }}>กรุณากด "add customer" ก่อน</div>}
-          {customerAdded && (
-            <div>
-              <div style={{ marginBottom: 'var(--space-3)' }}>
-                <small>เลือก env ที่เพิ่มไว้เพื่อเพิ่ม Application (สามารถเพิ่มได้หลายรายการ)</small>
-              </div>
-
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
-                <select id="app-env-select" value={appEntryEnv} onChange={(e) => setAppEntryEnv(e.target.value ? Number(e.target.value) : '')}>
-                  <option value="">-- เลือก env --</option>
-                  {selectedEnvChecks.map(id => {
-                    const opt = envOptions.find(o => o.id === id);
-                    return <option key={id} value={id}>{opt ? opt.env_name : id}</option>;
-                  })}
-                </select>
-
-                <input id="app-name-input" placeholder="app_name: โปรแกรม" value={appNameInput} onChange={e => setAppNameInput(e.target.value)} />
-
-                <button className="btn btn-secondary" onClick={() => {
-                  if (!appEntryEnv) {
-                    alert('กรุณาเลือก env ก่อนเพิ่ม Application');
-                    return;
-                  }
-                  handleAddApp(appEntryEnv, appNameInput);
-                  setAppNameInput('');
-                }}>add app</button>
-              </div>
-
-              <div className="table-container">
-                <table>
-                  <thead>
-                    <tr><th>Env</th><th>Application</th><th>Actions</th></tr>
-                  </thead>
-                  <tbody>
-                    {apps.map(a => {
-                      const opt = envOptions.find(o => o.id === a.env_id);
-                      return (<tr key={a.id}><td>{opt ? opt.env_name : a.env_id}</td><td>{a.app_name}</td><td><button className="btn btn-sm btn-danger" onClick={() => handleRemoveApp(a.id)}>Remove</button></td></tr>);
-                    })}
-                    {apps.length === 0 && <tr><td colSpan={3} style={{ textAlign: 'center', padding: 'var(--space-6)' }}>ยังไม่มี Application</td></tr>}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </section>
+        {/* Application removed per request */}
 
         {/* PM Plan Section */}
-        <section style={{ marginBottom: 'var(--space-6)' }}>
-          <h2>PM Plan</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: 'var(--space-3)' }}>
-            <div>
-              <label>pm_name (ชื่อสัญญา/โครงการ)</label>
-              <input id="pm-name" />
+        <section style={{ marginBottom: '1.25rem' }}>
+          <h4 style={{ marginBottom: '0.5rem' }}>PM Plan</h4>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.75rem', marginBottom: '0.5rem' }}>
+            <div className="form-group">
+              <label className="form-label">ชื่อ PM / โครงการ</label>
+              <input className="form-control" value={pmNameInput} onChange={e => setPmNameInput(e.target.value)} placeholder="ชื่อ PM" />
             </div>
-            <div>
-              <label>pm_year</label>
-              <input id="pm-year" type="number" />
+            <div className="form-group">
+              <label className="form-label">ปี PM ( เช่น 2024, 2025)</label>
+              <input className="form-control" type="number" value={pmYearInput as any} onChange={e => setPmYearInput(e.target.value ? Number(e.target.value) : '')} />
             </div>
-            <div>
-              <label>pm_round</label>
-              <input id="pm-round" type="number" defaultValue={1} />
+            <div className="form-group">
+              <label className="form-label">รอบ (จำนวน)</label>
+              <input
+                className="form-control"
+                type="number"
+                min={1}
+                value={pmRoundInput}
+                onChange={e => {
+                  const val = Number(e.target.value);
+                  setPmRoundInput(!Number.isNaN(val) && val >= 1 ? val : 1);
+                }}
+              />
             </div>
           </div>
           <div>
             <button className="btn btn-primary" onClick={() => {
-              const name = (document.getElementById('pm-name') as HTMLInputElement).value;
-              const yearVal = (document.getElementById('pm-year') as HTMLInputElement).value;
-              const roundVal = parseInt((document.getElementById('pm-round') as HTMLInputElement).value || '0', 10);
-              const year = yearVal ? parseInt(yearVal, 10) : '';
-              handleCreatePmRows(name, year as number | '', roundVal || 0);
-            }}>Create PM Rows</button>
+              handleCreatePmRows(pmNameInput, pmYearInput as number | '', pmRoundInput || 0);
+              // clear inputs for convenience
+              setPmNameInput(''); setPmYearInput(''); setPmRoundInput(1);
+            }}>Create PM</button>
           </div>
 
-          <div style={{ marginTop: 'var(--space-4)' }} className="table-container">
+          <div style={{ marginTop: '0.75rem' }} className="table-container">
             <table>
               <thead><tr><th>PM Name</th><th>Year</th><th>Round</th></tr></thead>
               <tbody>
                 {pmRows.map(p => (
                   <tr key={p.id}><td>{p.pm_name}</td><td>{p.pm_year}</td><td>{p.round}</td></tr>
                 ))}
-                {pmRows.length === 0 && <tr><td colSpan={3} style={{ textAlign: 'center', padding: 'var(--space-6)' }}>ยังไม่มี PM Plan</td></tr>}
+                {pmRows.length === 0 && <tr><td colSpan={3} style={{ textAlign: 'center', padding: '1rem' }}>ยังไม่มี PM Plan</td></tr>}
               </tbody>
             </table>
           </div>
         </section>
 
-        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-          <button className="btn btn-secondary" onClick={() => navigate('/customer')}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleSaveAll}>Save (temp)</button>
+        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+          <button className="btn btn-secondary" onClick={() => navigate('/customer')}>ยกเลิก</button>
+          <button className="btn btn-primary" onClick={handleSaveAll}>บันทึก</button>
         </div>
       </div>
     </div>

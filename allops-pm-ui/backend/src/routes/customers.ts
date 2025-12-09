@@ -1,5 +1,5 @@
 import express from 'express';
-import { getCustomers, createCustomer, updateCustomer, getCustomerPMPlans, getCustomerById, getCustomerServers, createCustomerBatch, getEnvs, getCustomerEnvs } from '../controllers/customersController';
+import { getCustomers, createCustomer, updateCustomer, getCustomerPMPlans, getCustomerById, getCustomerServers, createCustomerBatch, getEnvs, getCustomerEnvs, addCustomerServerEnvs, getCustomerWorkspaceDetails } from '../controllers/customersController';
 
 const router = express.Router();
 
@@ -28,6 +28,12 @@ router.get('/:id/servers', getCustomerServers);
 
 // Get env list (customer_env) for specific customer
 router.get('/:id/envs', getCustomerEnvs);
+
+// Workspace details per environment for specific customer
+router.get('/:id/workspace-details', getCustomerWorkspaceDetails);
+
+// Add server_env rows and link to customer_env for a specific customer
+router.post('/:id/server-envs', addCustomerServerEnvs);
 
 // Route to create a new customer
 router.post('/', createCustomer);

@@ -72,6 +72,18 @@ export const fetchCustomerEnvs = async (id: number): Promise<Array<{ cust_id: nu
   }
 };
 
+export const fetchCustomerWorkspaceDetails = async (
+  id: number
+): Promise<Array<{ env_id: number; env_name: string; workspace_text: string | null; workspace_date: string | null }>> => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/api/customers/${id}/workspace-details`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching customer workspace details:', error);
+    throw error;
+  }
+};
+
 export const createCustomerBatch = async (payload: any): Promise<any> => {
   try {
     const response = await axios.post(`${API_BASE_URL}/api/customers/batch`, payload);
@@ -88,6 +100,16 @@ export const fetchEnvs = async (): Promise<Array<{ id: number; env_name: string 
     return response.data;
   } catch (error) {
     console.error('Error fetching envs:', error);
+    throw error;
+  }
+};
+
+export const createCustomerServerEnvs = async (custId: number, payload: { entries: Array<{ env_id: number; server_name: string }> }) => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/api/customers/${custId}/server-envs`, payload);
+    return response.data;
+  } catch (error) {
+    console.error('Error creating customer server envs:', error);
     throw error;
   }
 };
