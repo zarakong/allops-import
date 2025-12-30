@@ -1,5 +1,5 @@
 import express from 'express';
-import { getPMTasks, createPMTask, updatePMTask, deletePMTask, getPMById, importPM, getPmRoundByKeys, getImportHeader, getAlfrescoApiResponses, getAppContentSizingRows, getAppResponseRows, importPMData, importAlfrescoApiData } from '../controllers/pmController';
+import { getPMTasks, createPMTask, updatePMTask, deletePMTask, getPMById, importPM, getPmRoundByKeys, getImportHeader, getAlfrescoApiResponses, getAppContentSizingRows, getAppResponseRows, importPMData, importAlfrescoApiData, importAppContentSizingData, importAppOtherApiResponses } from '../controllers/pmController';
 
 const router = express.Router();
 
@@ -38,6 +38,12 @@ router.post('/import/data', importPMData);
 
 // Route to import Alfresco API data
 router.post('/import/alfresco-api', importAlfrescoApiData);
+
+// Route to import Application sizing snapshots
+router.post('/import/app-content-sizing', importAppContentSizingData);
+
+// Route to import Application other API responses
+router.post('/import/app-responses', importAppOtherApiResponses);
 
 // Route to delete a PM task
 router.delete('/:id', deletePMTask);

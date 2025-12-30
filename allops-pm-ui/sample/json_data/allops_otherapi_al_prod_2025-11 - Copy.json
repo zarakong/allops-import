@@ -1,0 +1,3 @@
+{"customer":"al","server_name":"App-db","datetime":"2025-11-14T22:40:55+07:00","target":"alfresco","url":"https://aegis.bcircle.co.th/alfresco","http_code":"200","response_time_ms":583,"status":"success"}
+{"customer":"al","server_name":"App-db","datetime":"2025-11-14T22:40:55+07:00","target":"joget","url":"https://workflow.bcircle.co.th/jw","http_code":"200","response_time_ms":433,"status":"success"}
+{"customer":"al","server_name":"App-db","datetime":"2025-11-14T22:40:55+07:00","target":"postgresql","url":"http://150.107.29.130:5432","http_code":"200","response_time_ms":7,"status":"success"}

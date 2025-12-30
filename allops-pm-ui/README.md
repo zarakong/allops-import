@@ -17,6 +17,7 @@ The frontend is built using React and TypeScript. It includes the following key 
   - **Customer.tsx**: Shows a table of customers with options to edit and view PM plans.
   - **TaskPM.tsx**: Manages PM tasks.
   - **UploadPM.tsx**: Allows users to upload PM data.
+  - **Settings.tsx**: Provides an interface to configure the n8n webhook URLs (TEST/PRD) for Google Drive uploads.
 - **src/components**: Contains reusable components:
   - **Sidebar.tsx**: The sidebar with expandable/collapsible menu options.
   - **CustomerTable.tsx**: Renders the customer table with action buttons.
@@ -37,7 +38,7 @@ The backend is built using Node.js and TypeScript. It includes the following key
 
 ### Database
 
-- **db/allops-db.sql**: Contains the SQL schema and data for the PostgreSQL database.
+- **db/allops-db.sql**: Contains the SQL schema and data for the PostgreSQL database, including the `app_settings` table used to persist webhook configurations.
 
 ### Development
 
@@ -87,6 +88,14 @@ The backend is built using Node.js and TypeScript. It includes the following key
 
 - Use the sidebar to navigate between different sections: Report, Customer, Task PM, and Upload PM data.
 - In the Customer section, you can view, edit, and manage customer information and PM plans.
+- Open the **Settings** section to manage n8n webhook URLs (test & production) without editing environment variables.
+
+### Diagram Upload Workflow
+
+- The "Diagram project" upload button now sends images to the configured n8n workflow, which stores them in Google Drive using the naming scheme `{cust_code}_diagram_YYYY_MM_DD_HH_mm_ss.ext`.
+- Configure TEST/PRD webhook endpoints inside **Settings**. At least one URL must be present; selecting PRD requires a PRD URL.
+- The backend persists these URLs in the `app_settings` table and falls back to the default test webhook (`https://beflexdemo.bcircle.co.th/n8n/webhook-test/01fe257e-5afa-481e-8dc7-8061fb8468c3`) if no custom value is stored.
+- Additional environment variables (`N8N_WEBHOOK_TEST_URL`, `N8N_WEBHOOK_PRD_URL`, `N8N_WEBHOOK_MODE`, `DIAGRAM_MAX_FILE_MB`, `N8N_TIMEOUT_MS`) can be set on the backend to override defaults, but the UI-driven settings take precedence for daily operations.
 
 ## Contributing
 

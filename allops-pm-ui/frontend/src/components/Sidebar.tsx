@@ -27,6 +27,12 @@ const UploadIcon = () => (
   </svg>
 );
 
+const SettingsIcon = () => (
+  <svg className="menu-icon" fill="currentColor" viewBox="0 0 20 20">
+    <path fillRule="evenodd" d="M11.983 1.588a1 1 0 00-1.966 0l-.186 1.116a6.987 6.987 0 00-1.76.732L7.02 2.98a1 1 0 00-1.414 1.414l.456 1.05a7.004 7.004 0 00-.732 1.76l-1.116.186a1 1 0 000 1.966l1.116.186a6.987 6.987 0 00.732 1.76l-.456 1.05a1 1 0 001.414 1.414l1.05-.456a7.004 7.004 0 001.76.732l.186 1.116a1 1 0 001.966 0l.186-1.116a6.987 6.987 0 001.76-.732l1.05.456a1 1 0 001.414-1.414l-.456-1.05a7.004 7.004 0 00.732-1.76l1.116-.186a1 1 0 000-1.966l-1.116-.186a6.987 6.987 0 00-.732-1.76l.456-1.05A1 1 0 0012.733 2.98l-1.05.456a7.004 7.004 0 00-1.76-.732l-.186-1.116zM10 12a2 2 0 110-4 2 2 0 010 4z" clipRule="evenodd" />
+  </svg>
+);
+
 const MenuIcon = () => (
   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -46,6 +52,7 @@ const Sidebar: React.FC = () => {
     { path: '/customer', label: 'Customers', icon: <CustomerIcon />, section: 'Management' },
     { path: '/task-pm', label: 'PM Tasks', icon: <TaskIcon />, section: 'Operations' },
     { path: '/upload-pm', label: 'Upload Data', icon: <UploadIcon />, section: 'Operations' },
+    { path: '/settings', label: 'Settings', icon: <SettingsIcon />, section: 'Administration' },
   ];
 
   const groupedItems = menuItems.reduce((acc, item) => {

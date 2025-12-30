@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Allops Monitoring Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f5f5f5; /* Light gray background */
+            color: #333;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+
+    <div id="app" class="max-w-7xl mx-auto bg-white rounded-xl shadow-lg p-6 sm:p-8">
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-center sm:text-left text-gray-800">Allops Project Report</h1>
+            <p class="text-gray-500 text-center sm:text-left">ข้อมูลภาพรวมและสถิติของ Alfresco Infrastructure</p>
+        </header>
+
+        <section class="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0 sm:space-x-4 mb-8">
+            <div class="w-full sm:w-1/2">
+                <label for="project-select" class="block text-sm font-medium text-gray-700">เลือก Project</label>
+                <select id="project-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-400 bg-gray-200 text-gray-800 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md shadow-sm">
+                    <option>Customer A</option>
+                    <option>Customer B</option>
+                    <option>Customer C</option>
+                </select>
+            </div>
+            <div class="w-full sm:w-1/2">
+                <label for="date-start" class="block text-sm font-medium text-gray-700">วันที่ PM</label>
+                <input type="date" id="date-start" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-400 bg-gray-200 text-gray-800 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md shadow-sm">
+            </div>
+            <div class="w-full sm:w-auto mt-4 sm:mt-0">
+                <button @click="generateReport" class="w-full sm:w-auto px-6 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                    แสดง Report
+                </button>
+            </div>
+        </section>
+        
+        <!-- Main Content Area with Vertical Tabs -->
+        <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+            <!-- Left Sidebar for Navigation -->
+            <nav class="w-full sm:w-64 flex flex-col space-y-2 p-4 bg-gray-50 rounded-xl shadow-inner">
+                <button @click="showTab('project-details')" :class="{'bg-green-600 text-white': activeTab === 'project-details', 'text-gray-600 hover:bg-gray-100': activeTab !== 'project-details'}" class="tab-button px-4 py-2 rounded-md font-medium text-left transition-colors duration-200" title="รายละเอียดโปรเจกต์">
+                    Project details
+                </button>
+                <button @click="showTab('overview')" :class="{'bg-green-600 text-white': activeTab === 'overview', 'text-gray-600 hover:bg-gray-100': activeTab !== 'overview'}" class="tab-button px-4 py-2 rounded-md font-medium text-left transition-colors duration-200" title="รายละเอียด Server">
+                    Server Details
+                </button>
+                <button @click="showTab('growth')" :class="{'bg-green-600 text-white': activeTab === 'growth', 'text-gray-600 hover:bg-gray-100': activeTab !== 'growth'}" class="tab-button px-4 py-2 rounded-md font-medium text-left transition-colors duration-200" title="การวิเคราะห์การเติบโตของข้อมูล">
+                    Growth Analysis
+                </button>
+                <button @click="showTab('health-errors')" :class="{'bg-green-600 text-white': activeTab === 'health-errors', 'text-gray-600 hover:bg-gray-100': activeTab !== 'health-errors'}" class="tab-button px-4 py-2 rounded-md font-medium text-left transition-colors duration-200" title="สถานะและข้อผิดพลาด">
+                    Health & Error
+                </button>
+                <button @click="showTab('inspection')" :class="{'bg-green-600 text-white': activeTab === 'inspection', 'text-gray-600 hover:bg-gray-100': activeTab !== 'inspection'}" class="tab-button px-4 py-2 rounded-md font-medium text-left transition-colors duration-200" title="ผลการตรวจสอบและข้อคิดเห็น/หมายเหตุ">
+                    Inspection Results & Remarks
+                </button>
+                <button @click="showTab('settings')" :class="{'bg-green-600 text-white': activeTab === 'settings', 'text-gray-600 hover:bg-gray-100': activeTab !== 'settings'}" class="tab-button px-4 py-2 rounded-md font-medium text-left transition-colors duration-200" title="ตั้งค่าระบบ">
+                    Settings
+                </button>
+            </nav>
+
+            <!-- Right Column for Tab Content -->
+            <div id="tab-content" class="flex-1 bg-white p-4 sm:p-6 rounded-xl shadow-inner">
+                <!-- Project Details Tab Content -->
+                <div v-show="activeTab === 'project-details'" id="project-details" class="tab-pane">
+                    <h2 class="text-2xl font-semibold mb-4 text-gray-800">Project details</h2>
+                    
+                    <div class="bg-gray-50 rounded-lg p-4 mb-6 shadow-sm">
+                        <h3 class="text-lg font-bold text-gray-700 mb-4">Diagram</h3>
+                        <div class="text-center">
+                            <!-- Diagram content goes here -->
+                            <img src="https://hub.alfresco.com/legacyfs/online/alfresco/26562_diagram.png" alt="Alfresco Infrastructure Diagram" class="mx-auto rounded-lg shadow-md max-w-full h-auto">
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 rounded-lg p-4 mb-6 shadow-sm">
+                        <h3 class="text-lg font-bold text-gray-700 mb-4">Customer Details</h3>
+                        <p class="mb-2"><span class="font-medium">Customer name:</span> <span id="customer-name-display">{{ customerName }}</span></p>
+                        <p class="mb-4"><span class="font-medium">วันที่ PM:</span> <span id="pm-date-display">{{ pmDate }}</span></p>
+                        <table class="min-w-full divide-y divide-gray-200 mb-4">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider rounded-tl-lg">Item</th>
+                                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">PRD</th>
+                                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider rounded-tr-lg">UAT</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr><td class="px-4 py-2 text-sm font-medium text-gray-900">Application</td><td class="px-4 py-2 text-sm text-gray-500">Workspace</td><td class="px-4 py-2 text-sm text-gray-500">Workspace</td></tr>
+                                <tr><td class="px-4 py-2 text-sm font-medium text-gray-900"></td><td class="px-4 py-2 text-sm text-gray-500">PostgreSQL</td><td class="px-4 py-2 text-sm text-gray-500">PostgreSQL</td></tr>
+                                <tr><td class="px-4 py-2 text-sm font-medium text-gray-900"></td><td class="px-4 py-2 text-sm text-gray-500">batch Upload</td><td class="px-4 py-2 text-sm text-gray-500">batch Upload</td></tr>
+                                <tr><td class="px-4 py-2 text-sm font-medium text-gray-900">Support type</td><td class="px-4 py-2 text-sm text-gray-500">Server</td><td class="px-4 py-2 text-sm text-gray-500">Server</td></tr>
+                                <tr><td class="px-4 py-2 text-sm font-medium text-gray-900"></td><td class="px-4 py-2 text-sm text-gray-500">Workspace</td><td class="px-4 py-2 text-sm text-gray-500">Workspace</td></tr>
+                                <tr><td class="px-4 py-2 text-sm font-medium text-gray-900"></td><td class="px-4 py-2 text-sm text-gray-500">Database</td><td class="px-4 py-2 text-sm text-gray-500">Database</td></tr>
+                                <tr><td class="px-4 py-2 text-sm font-medium text-gray-900">Remark</td><td class="px-4 py-2 text-sm text-gray-500" colspan="2">ระบบทดสอบ Allops</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="bg-gray-50 rounded-lg p-4 mb-6 shadow-sm">
+                        <h3 class="text-lg font-bold text-gray-700 mb-4">beFlex workspace details</h3>
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider rounded-tl-lg">Item</th>
+                                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">PRD</th>
+                                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider rounded-tr-lg">UAT</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr><td class="px-4 py-2 text-sm font-medium text-gray-900">IP</td><td class="px-4 py-2 text-sm text-gray-500">172.19.9.111</td><td class="px-4 py-2 text-sm text-gray-500">172.19.9.112</td></tr>
+                                <tr><td class="px-4 py-2 text-sm font-medium text-gray-900">Alfresco version</td><td class="px-4 py-2 text-sm text-gray-500">Alfresco 23</td><td class="px-4 py-2 text-sm text-gray-500">Alfresco 23</td></tr>
+                                <tr><td class="px-4 py-2 text-sm font-medium text-gray-900">URL</td><td class="px-4 py-2 text-sm text-gray-500"><a href="https://prd.bcircle.co.th" class="text-green-600 hover:underline">https://prd.bcircle.co.th</a></td><td class="px-4 py-2 text-sm text-gray-500"><a href="https://uat.bcircle.co.th" class="text-green-600 hover:underline">https://uat.bcircle.co.th</a></td></tr>
+                                <tr><td class="px-4 py-2 text-sm font-medium text-gray-900">Path Install</td><td class="px-4 py-2 text-sm text-gray-500">/opt/beflex-workspace</td><td class="px-4 py-2 text-sm text-gray-500">/opt/beflex-workspace</td></tr>
+                                <tr><td class="px-4 py-2 text-sm font-medium text-gray-900">Path Content</td><td class="px-4 py-2 text-sm text-gray-500">/opt/beflex-data/alf-repo-data</td><td class="px-4 py-2 text-sm text-gray-500">/opt/beflex-data/alf-repo-data</td></tr>
+                                <tr><td class="px-4 py-2 text-sm font-medium text-gray-900">Path Index</td><td class="px-4 py-2 text-sm text-gray-500">/opt/beflex-data/solr-data23</td><td class="px-4 py-2 text-sm text-gray-500">/opt/beflex-data/solr-data23</td></tr>
+                                <tr><td class="px-4 py-2 text-sm font-medium text-gray-900">Index Type</td><td class="px-4 py-2 text-sm text-gray-500">Solr6</td><td class="px-4 py-2 text-sm text-gray-500">Solr6</td></tr>
+                                <tr><td class="px-4 py-2 text-sm font-medium text-gray-900">License B Circle</td><td class="px-4 py-2 text-sm text-gray-500">c7f81e18-649a-47ff-9d25-xxxxxx</td><td class="px-4 py-2 text-sm text-gray-500">c7f81e18-649a-47ff-9d25-zzzzzz</td></tr>
+                                <tr><td class="px-4 py-2 text-sm font-medium text-gray-900">Concurrent</td><td class="px-4 py-2 text-sm text-gray-500">2000</td><td class="px-4 py-2 text-sm text-gray-500">100</td></tr>
+                                <tr><td class="px-4 py-2 text-sm font-medium text-gray-900">SSO setting</td><td class="px-4 py-2 text-sm text-gray-500">NONE</td><td class="px-4 py-2 text-sm text-gray-500">NONE</td></tr>
+                                <tr><td class="px-4 py-2 text-sm font-medium text-gray-900">Email outbound setting</td><td class="px-4 py-2 text-sm text-gray-500">NONE</td><td class="px-4 py-2 text-sm text-gray-500">NONE</td></tr>
+                                <tr><td class="px-4 py-2 text-sm font-medium text-gray-900">Env</td><td class="px-4 py-2 text-sm text-gray-500">ALFRESCO_CE_TAG=23.1.1.5<br>SEARCH_CE_TAG=2.0.8.2<br>SHARE_TAG=23.1.1<br>TRANSFORM_ENGINE_TAG=2.5.7<br>ACTIVEMQ_TAG=5.17.1-jre11-rockylinux8<br>BCM_TAG=23.1.201<br>NGINX_TAG=1.25.4<br>PDF_SERVICE=0.0.10<br>QUICK_SHARE_FRONTEND=0.0.6<br>QUICK_SHARE_BACKEND=0.0.12<br>DOCUMENT_EXPIRE=0.0.16<br>WEBVIEWER_BACKEND=0.0.1</td><td class="px-4 py-2 text-sm text-gray-500">ALFRESCO_CE_TAG=23.1.1.5<br>SEARCH_CE_TAG=2.0.8.2<br>SHARE_TAG=23.1.1<br>TRANSFORM_ENGINE_TAG=2.5.7<br>ACTIVEMQ_TAG=5.17.1-jre11-rockylinux8<br>BCM_TAG=23.1.201<br>NGINX_TAG=1.25.4<br>PDF_SERVICE=0.0.10<br>QUICK_SHARE_FRONTEND=0.0.6<br>QUICK_SHARE_BACKEND=0.0.12<br>DOCUMENT_EXPIRE=0.0.16<br>WEBVIEWER_BACKEND=0.0.1</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Overview Tab Content -->
+                <div v-show="activeTab === 'overview'" id="overview" class="tab-pane">
+                    <h2 class="text-2xl font-semibold mb-4 text-gray-800">รายละเอียด Server (Server Details)</h2>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                        <!-- Server 1 Section -->
+                        <div class="bg-gray-50 rounded-lg p-4 shadow-sm flex flex-col">
+                            <h3 class="text-xl font-bold text-gray-800 mb-4">allops-prod-svr-01</h3>
+                            
+                            <!-- Server Spec -->
+                            <div class="bg-white rounded-lg p-4 shadow-sm flex-grow mb-4">
+                                <h4 class="text-lg font-medium text-gray-700 mb-2">Spec Server</h4>
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <tbody class="bg-white divide-y divide-gray-200">
+                                        <tr><td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">RAM</td><td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">32 GB</td></tr>
+                                        <tr><td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">CPU</td><td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">Intel(R) Xeon(R) Gold 6248R</td></tr>
+                                        <tr><td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">CPU Cores</td><td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">24</td></tr>
+                                        <tr><td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">Partition app</td><td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">100 GB / 200 GB (50% Used)</td></tr>
+                                        <tr><td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">Partition data</td><td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">200 GB / 500 GB (40% Used)</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <!-- Disk Usage Chart -->
+                            <div class="bg-white rounded-lg p-4 shadow-sm h-64">
+                                <h4 class="text-lg font-medium text-gray-700 mb-2">การใช้งานดิสก์ (ย้อนหลัง 6 เดือน)</h4>
+                                <canvas id="server1-chart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Server 2 Section -->
+                        <div class="bg-gray-50 rounded-lg p-4 shadow-sm flex flex-col">
+                            <h3 class="text-xl font-bold text-gray-800 mb-4">allops-prod-svr-02</h3>
+                            
+                            <!-- Server Spec -->
+                            <div class="bg-white rounded-lg p-4 shadow-sm flex-grow mb-4">
+                                <h4 class="text-lg font-medium text-gray-700 mb-2">Spec Server</h4>
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <tbody class="bg-white divide-y divide-gray-200">
+                                        <tr><td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">RAM</td><td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">32 GB</td></tr>
+                                        <tr><td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">CPU</td><td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">Intel(R) Xeon(R) Gold 6248R</td></tr>
+                                        <tr><td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">CPU Cores</td><td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">24</td></tr>
+                                        <tr><td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">Partition app</td><td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">100 GB / 200 GB (50% Used)</td></tr>
+                                        <tr><td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">Partition data</td><td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">250 GB / 500 GB (50% Used)</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <!-- Disk Usage Chart -->
+                            <div class="bg-white rounded-lg p-4 shadow-sm h-64">
+                                <h4 class="text-lg font-medium text-gray-700 mb-2">การใช้งานดิสก์ (ย้อนหลัง 6 เดือน)</h4>
+                                <canvas id="server2-chart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Server 3 Section -->
+                        <div class="bg-gray-50 rounded-lg p-4 shadow-sm flex flex-col">
+                            <h3 class="text-xl font-bold text-gray-800 mb-4">allops-prod-svr-03</h3>
+                            
+                            <!-- Server Spec -->
+                            <div class="bg-white rounded-lg p-4 shadow-sm flex-grow mb-4">
+                                <h4 class="text-lg font-medium text-gray-700 mb-2">Spec Server</h4>
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <tbody class="bg-white divide-y divide-gray-200">
+                                        <tr><td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">RAM</td><td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">32 GB</td></tr>
+                                        <tr><td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">CPU</td><td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">Intel(R) Xeon(R) Gold 6248R</td></tr>
+                                        <tr><td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">CPU Cores</td><td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">24</td></tr>
+                                        <tr><td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">Partition app</td><td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">100 GB / 200 GB (50% Used)</td></tr>
+                                        <tr><td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">Partition data</td><td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">300 GB / 500 GB (60% Used)</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <!-- Disk Usage Chart -->
+                            <div class="bg-white rounded-lg p-4 shadow-sm h-64">
+                                <h4 class="text-lg font-medium text-gray-700 mb-2">การใช้งานดิสก์ (ย้อนหลัง 6 เดือน)</h4>
+                                <canvas id="server3-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+
+                <!-- Growth Analysis Tab Content -->
+                <div v-show="activeTab === 'growth'" id="growth" class="tab-pane">
+                    <h2 class="text-2xl font-semibold mb-4 text-gray-800">การวิเคราะห์การเติบโตของข้อมูล</h2>
+
+                    <div class="w-full mb-4">
+                        <label for="history-select" class="block text-sm font-medium text-gray-700">ช่วงเวลา</label>
+                        <select id="history-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md shadow-sm">
+                            <option>ย้อนหลัง 6 เดือน</option>
+                            <option>ย้อนหลัง 12 เดือน</option>
+                            <option>ย้อนหลัง 2 ปี</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Topic 1: Content Sizing on Server -->
+                    <div class="bg-gray-50 rounded-lg p-4 mb-6 shadow-sm">
+                        <h3 class="text-lg font-medium text-gray-700 mb-4">1. Content Store Sizing ใน Server</h3>
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider rounded-tl-lg">เดือน</th>
+                                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Contentstore (GB)</th>
+                                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">การเติบโต (%)</th>
+                                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">PostgreSQL (GB)</th>
+                                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider rounded-tr-lg">การเติบโต (%)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr><td class="px-4 py-2 text-sm text-gray-500">ม.ค. 2024</td><td class="px-4 py-2 text-sm text-gray-900">120.5</td><td class="px-4 py-2 text-sm text-green-600">--</td><td class="px-4 py-2 text-sm text-gray-900">45.2</td><td class="px-4 py-2 text-sm text-green-600">--</td></tr>
+                                <tr><td class="px-4 py-2 text-sm text-gray-500">ก.พ. 2024</td><td class="px-4 py-2 text-sm text-gray-900">128.8</td><td class="px-4 py-2 text-sm text-green-600">+6.9%</td><td class="px-4 py-2 text-sm text-gray-900">46.1</td><td class="px-4 py-2 text-sm text-green-600">+2.0%</td></tr>
+                                <tr><td class="px-4 py-2 text-sm text-gray-500">มี.ค. 2024</td><td class="px-4 py-2 text-sm text-gray-900">135.2</td><td class="px-4 py-2 text-sm text-green-600">+5.0%</td><td class="px-4 py-2 text-sm text-gray-900">47.8</td><td class="px-4 py-2 text-sm text-green-600">+3.7%</td></tr>
+                                <tr><td class="px-4 py-2 text-sm text-gray-500">เม.ย. 2024</td><td class="px-4 py-2 text-sm text-gray-900">148.1</td><td class="px-4 py-2 text-sm text-red-600 font-semibold">+9.5%</td><td class="px-4 py-2 text-sm text-gray-900">48.9</td><td class="px-4 py-2 text-sm text-green-600">+2.3%</td></tr>
+                                <tr><td class="px-4 py-2 text-sm text-gray-500">พ.ค. 2024</td><td class="px-4 py-2 text-sm text-gray-900">155.0</td><td class="px-4 py-2 text-sm text-green-600">+4.6%</td><td class="px-4 py-2 text-sm text-gray-900">49.8</td><td class="px-4 py-2 text-sm text-green-600">+1.8%</td></tr>
+                                <tr><td class="px-4 py-2 text-sm text-gray-900">มิ.ย. 2024</td><td class="px-4 py-2 text-sm text-gray-900">168.9</td><td class="px-4 py-2 text-sm text-red-600 font-semibold">+9.0%</td><td class="px-4 py-2 text-sm text-gray-900">51.2</td><td class="px-4 py-2 text-sm text-red-600 font-semibold">+2.8%</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Topic 2: File and Volume Growth -->
+                    <div class="bg-gray-50 rounded-lg p-4 mb-6 shadow-sm">
+                        <h3 class="text-lg font-medium text-gray-700 mb-4">2. ขนาดไฟล์และปริมาณรวมในระบบ Alfresco</h3>
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider rounded-tl-lg">เดือน</th>
+                                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">จำนวนไฟล์</th>
+                                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider rounded-tr-lg">ขนาดรวม (Sizing)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr><td class="px-4 py-2 text-sm text-gray-500">ม.ค. 2024</td><td class="px-4 py-2 text-sm text-gray-900">1.2 M</td><td class="px-4 py-2 text-sm text-gray-900">165.7 GB</td></tr>
+                                <tr><td class="px-4 py-2 text-sm text-gray-500">ก.พ. 2024</td><td class="px-4 py-2 text-sm text-gray-900">1.3 M</td><td class="px-4 py-2 text-sm text-gray-900">174.9 GB</td></tr>
+                                <tr><td class="px-4 py-2 text-sm text-gray-500">มี.ค. 2024</td><td class="px-4 py-2 text-sm text-gray-900">1.4 M</td><td class="px-4 py-2 text-sm text-gray-900">183.0 GB</td></tr>
+                                <tr><td class="px-4 py-2 text-sm text-gray-500">เม.ย. 2024</td><td class="px-4 py-2 text-sm text-gray-900">1.5 M</td><td class="px-4 py-2 text-sm text-gray-900">197.0 GB</td></tr>
+                                <tr><td class="px-4 py-2 text-sm text-gray-500">พ.ค. 2024</td><td class="px-4 py-2 text-sm text-gray-900">1.55 M</td><td class="px-4 py-2 text-sm text-gray-900">204.8 GB</td></tr>
+                                <tr><td class="px-4 py-2 text-sm text-gray-900">มิ.ย. 2024</td><td class="px-4 py-2 text-sm text-gray-900">1.68 M</td><td class="px-4 py-2 text-sm text-gray-900">220.1 GB</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Topic 3: Session Transaction -->
+                    <div class="bg-gray-50 rounded-lg p-4 mb-6 shadow-sm">
+                        <h3 class="text-lg font-medium text-gray-700 mb-4">3. Session Transaction (เฉลี่ยรายวันต่อเดือน)</h3>
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider rounded-tl-lg">เดือน</th>
+                                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Concurrent</th>
+                                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Login</th>
+                                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Session Expire</th>
+                                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider rounded-tr-lg">Logout</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr><td class="px-4 py-2 text-sm text-gray-500">ม.ค. 2024</td><td class="px-4 py-2 text-sm text-gray-900">1,500</td><td class="px-4 py-2 text-sm text-gray-900">1,200</td><td class="px-4 py-2 text-sm text-gray-900">100</td><td class="px-4 py-2 text-sm text-gray-900">1,100</td></tr>
+                                <tr><td class="px-4 py-2 text-sm text-gray-500">ก.พ. 2024</td><td class="px-4 py-2 text-sm text-gray-900">1,550</td><td class="px-4 py-2 text-sm text-gray-900">1,250</td><td class="px-4 py-2 text-sm text-gray-900">110</td><td class="px-4 py-2 text-sm text-gray-900">1,140</td></tr>
+                                <tr><td class="px-4 py-2 text-sm text-gray-500">มี.ค. 2024</td><td class="px-4 py-2 text-sm text-gray-900">1,600</td><td class="px-4 py-2 text-sm text-gray-900">1,300</td><td class="px-4 py-2 text-sm text-gray-900">120</td><td class="px-4 py-2 text-sm text-gray-900">1,180</td></tr>
+                                <tr><td class="px-4 py-2 text-sm text-gray-500">เม.ย. 2024</td><td class="px-4 py-2 text-sm text-gray-900">1,650</td><td class="px-4 py-2 text-sm text-gray-900">1,350</td><td class="px-4 py-2 text-sm text-gray-900">130</td><td class="px-4 py-2 text-sm text-gray-900">1,220</td></tr>
+                                <tr><td class="px-4 py-2 text-sm text-gray-500">พ.ค. 2024</td><td class="px-4 py-2 text-sm text-gray-900">1,700</td><td class="px-4 py-2 text-sm text-gray-900">1,400</td><td class="px-4 py-2 text-sm text-gray-900">140</td><td class="px-4 py-2 text-sm text-gray-900">1,260</td></tr>
+                                <tr><td class="px-4 py-2 text-sm text-gray-500">มิ.ย. 2024</td><td class="px-4 py-2 text-sm text-gray-900">1,750</td><td class="px-4 py-2 text-sm text-gray-900">1,450</td><td class="px-4 py-2 text-sm text-gray-900">150</td><td class="px-4 py-2 text-sm text-gray-900">1,300</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+
+                    <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-lg shadow-sm" role="alert">
+                        <p class="font-bold">AI Recommendation</p>
+                        <p class="text-sm">จากข้อมูลการเติบโตของ Contentstore ที่สูงกว่า 9% ในเดือนเมษายนและมิถุนายน อาจเกิดจากการ Import ข้อมูลจำนวนมากหรือการใช้งานที่เพิ่มขึ้นอย่างรวดเร็ว โปรดตรวจสอบกิจกรรมในช่วงเวลาดังกล่าว และพิจารณาแผนการขยายพื้นที่ดิสก์ในอีก 3-6 เดือนข้างหน้า</p>
+                    </div>
+                </div>
+
+                <!-- Health & Errors Tab Content -->
+                <div v-show="activeTab === 'health-errors'" id="health-errors" class="tab-pane">
+                    <h2 class="text-2xl font-semibold mb-4 text-gray-800">สถานะและข้อผิดพลาด</h2>
+                    
+                    <!-- Workspace Section -->
+                    <div class="card mb-8">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-2xl font-semibold text-gray-700">Workspace</h2>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-gray-600">แสดงผลย้อนหลัง:</span>
+                                <select v-model="timeframe.workspace" @change="createChart('workspacePrdChart', 'workspace'); createChart('workspaceUatChart', 'workspace')"
+                                        class="form-select block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md">
+                                    <option value="day">วัน</option>
+                                    <option value="week">สัปดาห์</option>
+                                    <option value="month">เดือน</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="chart-container">
+                                <h3 class="text-xl font-medium text-center mb-2">PRD</h3>
+                                <canvas id="workspacePrdChart"></canvas>
+                            </div>
+                            <div class="chart-container">
+                                <h3 class="text-xl font-medium text-center mb-2">UAT</h3>
+                                <canvas id="workspaceUatChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="mt-8">
+                            <h3 class="text-xl font-semibold text-gray-700 mb-4">ข้อมูล Error ที่สำคัญ</h3>
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <ul class="space-y-2">
+                                    <li v-for="error in displayedErrors.workspace" :key="error.id" class="p-2 bg-white rounded-md shadow-sm">
+                                        <span class="font-medium text-red-600">[{{ error.code }}]</span>
+                                        <span>{{ error.description }}</span>
+                                    </li>
+                                </ul>
+                                <div v-if="allErrors.workspace.length > 4" class="text-center mt-4">
+                                    <button @click="toggleErrors('workspace')"
+                                            class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                        {{ showAllErrors.workspace ? 'ซ่อน' : 'แสดงทั้งหมด' }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Database Section -->
+                    <div class="card mb-8">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-2xl font-semibold text-gray-700">Database</h2>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-gray-600">แสดงผลย้อนหลัง:</span>
+                                <select v-model="timeframe.database" @change="createChart('databasePrdChart', 'database'); createChart('databaseUatChart', 'database')"
+                                        class="form-select block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md">
+                                    <option value="day">วัน</option>
+                                    <option value="week">สัปดาห์</option>
+                                    <option value="month">เดือน</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="chart-container">
+                                <h3 class="text-xl font-medium text-center mb-2">PRD</h3>
+                                <canvas id="databasePrdChart"></canvas>
+                            </div>
+                            <div class="chart-container">
+                                <h3 class="text-xl font-medium text-center mb-2">UAT</h3>
+                                <canvas id="databaseUatChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="mt-8">
+                            <h3 class="text-xl font-semibold text-gray-700 mb-4">ข้อมูล Error ที่สำคัญ</h3>
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <ul class="space-y-2">
+                                    <li v-for="error in displayedErrors.database" :key="error.id" class="p-2 bg-white rounded-md shadow-sm">
+                                        <span class="font-medium text-red-600">[{{ error.code }}]</span>
+                                        <span>{{ error.description }}</span>
+                                    </li>
+                                </ul>
+                                <div v-if="allErrors.database.length > 4" class="text-center mt-4">
+                                    <button @click="toggleErrors('database')"
+                                            class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                        {{ showAllErrors.database ? 'ซ่อน' : 'แสดงทั้งหมด' }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Solr6 Section -->
+                    <div class="card mb-8">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-2xl font-semibold text-gray-700">Solr6</h2>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-gray-600">แสดงผลย้อนหลัง:</span>
+                                <select v-model="timeframe.solr6" @change="createChart('solr6PrdChart', 'solr6'); createChart('solr6UatChart', 'solr6')"
+                                        class="form-select block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md">
+                                    <option value="day">วัน</option>
+                                    <option value="week">สัปดาห์</option>
+                                    <option value="month">เดือน</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="chart-container">
+                                <h3 class="text-xl font-medium text-center mb-2">PRD</h3>
+                                <canvas id="solr6PrdChart"></canvas>
+                            </div>
+                            <div class="chart-container">
+                                <h3 class="text-xl font-medium text-center mb-2">UAT</h3>
+                                <canvas id="solr6UatChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="mt-8">
+                            <h3 class="text-xl font-semibold text-gray-700 mb-4">ข้อมูล Error ที่สำคัญ</h3>
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <ul class="space-y-2">
+                                    <li v-for="error in displayedErrors.solr6" :key="error.id" class="p-2 bg-white rounded-md shadow-sm">
+                                        <span class="font-medium text-red-600">[{{ error.code }}]</span>
+                                        <span>{{ error.description }}</span>
+                                    </li>
+                                </ul>
+                                <div v-if="allErrors.solr6.length > 4" class="text-center mt-4">
+                                    <button @click="toggleErrors('solr6')"
+                                            class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                        {{ showAllErrors.solr6 ? 'ซ่อน' : 'แสดงทั้งหมด' }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Activemq Section -->
+                    <div class="card mb-8">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-2xl font-semibold text-gray-700">Activemq</h2>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-gray-600">แสดงผลย้อนหลัง:</span>
+                                <select v-model="timeframe.activemq" @change="createChart('activemqPrdChart', 'activemq'); createChart('activemqUatChart', 'activemq')"
+                                        class="form-select block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md">
+                                    <option value="day">วัน</option>
+                                    <option value="week">สัปดาห์</option>
+                                    <option value="month">เดือน</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="chart-container">
+                                <h3 class="text-xl font-medium text-center mb-2">PRD</h3>
+                                <canvas id="activemqPrdChart"></canvas>
+                            </div>
+                            <div class="chart-container">
+                                <h3 class="text-xl font-medium text-center mb-2">UAT</h3>
+                                <canvas id="activemqUatChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="mt-8">
+                            <h3 class="text-xl font-semibold text-gray-700 mb-4">ข้อมูล Error ที่สำคัญ</h3>
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <ul class="space-y-2">
+                                    <li v-for="error in displayedErrors.activemq" :key="error.id" class="p-2 bg-white rounded-md shadow-sm">
+                                        <span class="font-medium text-red-600">[{{ error.code }}]</span>
+                                        <span>{{ error.description }}</span>
+                                    </li>
+                                </ul>
+                                <div v-if="allErrors.activemq.length > 4" class="text-center mt-4">
+                                    <button @click="toggleErrors('activemq')"
+                                            class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                        {{ showAllErrors.activemq ? 'ซ่อน' : 'แสดงทั้งหมด' }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inspection Results & Remarks Tab Content -->
+                <div v-show="activeTab === 'inspection'" id="inspection" class="tab-pane">
+                    <h2 class="text-2xl font-semibold mb-4 text-gray-800">ผลการตรวจสอบและข้อคิดเห็น/หมายเหตุ</h2>
+                    
+                    <div class="bg-gray-50 rounded-lg p-6 mb-6 shadow-sm">
+                        <h3 class="text-lg font-bold text-gray-700 mb-4">สรุปจาก Server Details</h3>
+                        <p class="text-sm text-gray-600 mb-2">
+                            จากข้อมูล Server Details พบว่าเซิร์ฟเวอร์หลักทั้ง 3 ตัวมีสเปคที่เพียงพอต่อการใช้งานในปัจจุบัน โดยมีการใช้งานพื้นที่ดิสก์อยู่ที่ 40%, 50% และ 60% ตามลำดับ
+                        </p>
+                    </div>
+
+                    <div class="bg-gray-50 rounded-lg p-6 mb-6 shadow-sm">
+                        <h3 class="text-lg font-bold text-gray-700 mb-4">สรุปจาก Growth Analysis</h3>
+                        <p class="text-sm text-gray-600 mb-2">
+                            พบว่าข้อมูลใน Contentstore มีการเติบโตอย่างรวดเร็วในช่วงเดือนเมษายนและมิถุนายน ที่เพิ่มขึ้นถึง 9.5% และ 9.0% ตามลำดับ ซึ่งสูงกว่าค่าเฉลี่ยปกติ
+                        </p>
+                        <p class="text-sm text-gray-600">
+                            จำนวนไฟล์รวมในระบบเพิ่มขึ้นจาก 1.2 ล้านไฟล์เป็น 1.68 ล้านไฟล์ และขนาดรวมเพิ่มขึ้นจาก 165.7 GB เป็น 220.1 GB ภายในระยะเวลา 6 เดือน
+                        </p>
+                    </div>
+
+                    <div class="bg-gray-50 rounded-lg p-6 mb-6 shadow-sm">
+                        <h3 class="text-lg font-bold text-gray-700 mb-4">สรุปจาก Health & Error</h3>
+                        <p class="text-sm text-gray-600 mb-2">
+                            สถานะการทำงานของ service 'capture-service' เป็น inactive และพบข้อผิดพลาดที่สำคัญใน log file คือ 'java.lang.OutOfMemoryError' ซึ่งชี้ให้เห็นว่า JVM Heap Space อาจไม่เพียงพอ
+                        </p>
+                    </div>
+                    
+                    <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-lg shadow-sm" role="alert">
+                        <p class="font-bold mb-2">ข้อเสนอแนะและข้อคิดเห็น (Recommendations & Remarks)</p>
+                        <ul class="list-disc list-inside text-sm">
+                            <li>จากข้อมูลการเติบโตที่เพิ่มขึ้นอย่างรวดเร็ว โปรดพิจารณาแผนการขยายพื้นที่ดิสก์ในอีก 3-6 เดือนข้างหน้า</li>
+                            <li>ตรวจสอบ service 'capture-service' ที่อยู่ในสถานะ inactive และหาสาเหตุของปัญหา</li>
+                            <li>พิจารณาเพิ่มค่า JVM_OPTION เพื่อแก้ไขปัญหา OutOfMemoryError ที่เกิดขึ้น</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Settings Tab Content -->
+                <div v-show="activeTab === 'settings'" id="settings" class="tab-pane">
+                    <h2 class="text-2xl font-semibold mb-4 text-gray-800">Settings</h2>
+                    <div class="p-4 bg-gray-50 rounded-lg shadow-sm">
+                        <p class="text-gray-600">หน้านี้เป็นส่วนสำหรับตั้งค่าระบบต่างๆ เช่น การจัดการผู้ใช้งาน การตั้งค่าการแจ้งเตือน หรือการกำหนดสิทธิ์การเข้าถึงข้อมูล</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted, nextTick } = Vue;
+
+        createApp({
+            setup() {
+                const activeTab = ref('project-details');
+                const customerName = ref('');
+                const pmDate = ref('');
+                
+                // For Health & Errors tab
+                const timeframe = ref({
+                    workspace: 'day',
+                    database: 'day',
+                    solr6: 'day',
+                    activemq: 'day'
+                });
+                const showAllErrors = ref({
+                    workspace: false,
+                    database: false,
+                    solr6: false,
+                    activemq: false
+                });
+                const allErrors = ref({
+                    workspace: [
+                        { id: 1, code: 401, description: 'Unauthorized: Access token is missing or invalid.' },
+                        { id: 2, code: 404, description: 'Not Found: The requested resource could not be found.' },
+                        { id: 3, code: 500, description: 'Internal Server Error: Something went wrong on the server.' },
+                        { id: 4, code: 503, description: 'Service Unavailable: The server is not ready to handle the request.' },
+                        { id: 5, code: 400, description: 'Bad Request: The request was malformed or invalid.' },
+                        { id: 6, code: 403, description: 'Forbidden: You do not have permission to access this resource.' },
+                        { id: 7, code: 408, description: 'Request Timeout: The server timed out waiting for the request.' },
+                        { id: 8, code: 429, description: 'Too Many Requests: Rate limit exceeded.' },
+                        { id: 9, code: 502, description: 'Bad Gateway: Invalid response from upstream server.' },
+                        { id: 10, code: 504, description: 'Gateway Timeout: The gateway timed out.' },
+                        { id: 11, code: 501, description: 'Not Implemented: The server does not support the functionality required to fulfill the request.' },
+                        { id: 12, code: 505, description: 'HTTP Version Not Supported: The HTTP protocol version used in the request is not supported.' },
+                        { id: 13, code: 507, description: 'Insufficient Storage: The server is unable to store the representation needed to complete the request.' },
+                        { id: 14, code: 509, description: 'Bandwidth Limit Exceeded: Server is temporarily out of bandwidth.' },
+                    ],
+                    database: [
+                        { id: 1, code: 1045, description: 'Access denied for user.' },
+                        { id: 2, code: 2002, description: 'Cannot connect to MySQL server.' },
+                        { id: 3, code: 1146, description: 'Table does not exist.' },
+                        { id: 4, code: 1064, description: 'SQL syntax error.' },
+                        { id: 5, code: 1044, description: 'Access denied to database.' },
+                        { id: 6, code: 1054, description: 'Unknown column in field list.' },
+                        { id: 7, code: 1062, description: 'Duplicate entry for key.' },
+                        { id: 8, code: 1049, description: 'Unknown database.' },
+                        { id: 9, code: 2003, description: 'Can not connect to server on port.' },
+                        { id: 10, code: 1317, description: 'Query execution was interrupted.' },
+                        { id: 11, code: 1213, description: 'Deadlock found when trying to get lock.' },
+                        { id: 12, code: 1451, description: 'Cannot delete or update a parent row: a foreign key constraint fails.' },
+                        { id: 13, code: 1292, description: 'Truncated incorrect datetime value.' },
+                        { id: 14, code: 1061, description: 'Duplicate key name.' },
+                    ],
+                    solr6: [
+                        { id: 1, code: 400, description: 'Bad Request: Missing required parameter.' },
+                        { id: 2, code: 404, description: 'Collection Not Found.' },
+                        { id: 3, code: 500, description: 'Internal Server Error: Index corrupted.' },
+                        { id: 4, code: 503, description: 'Service Unavailable: Solr is not ready to handle requests.' },
+                        { id: 5, code: 401, description: 'Unauthorized: API key is invalid.' },
+                        { id: 6, code: 403, description: 'Forbidden: Access to the resource is denied.' },
+                        { id: 7, code: 405, description: 'Method Not Allowed.' },
+                        { id: 8, code: 408, description: 'Request Timeout: The request took too long.' },
+                        { id: 9, code: 502, description: 'Bad Gateway: Invalid response from Solr.' },
+                        { id: 10, code: 504, description: 'Gateway Timeout: The gateway timed out.' },
+                    ],
+                    activemq: [
+                        { id: 1, code: 500, description: 'Internal Server Error: Failed to process message.' },
+                        { id: 2, code: 503, description: 'Service Unavailable: Broker is offline or not responding.' },
+                        { id: 3, code: 401, description: 'Unauthorized: Authentication failed.' },
+                        { id: 4, code: 403, description: 'Forbidden: User does not have permission.' },
+                        { id: 5, code: 400, description: 'Bad Request: Invalid message format.' },
+                        { id: 6, code: 404, description: 'Queue not found.' },
+                        { id: 7, code: 504, description: 'Timeout waiting for response from broker.' },
+                        { id: 8, code: 502, description: 'Bad Gateway: Broker is unreachable.' },
+                        { id: 9, code: 413, description: 'Payload too large: Message exceeds size limit.' },
+                        { id: 10, code: 429, description: 'Too Many Requests: Rate limit exceeded.' },
+                    ]
+                });
+
+                const displayedErrors = computed(() => {
+                    return {
+                        workspace: showAllErrors.value.workspace ? allErrors.value.workspace : allErrors.value.workspace.slice(0, 4),
+                        database: showAllErrors.value.database ? allErrors.value.database : allErrors.value.database.slice(0, 4),
+                        solr6: showAllErrors.value.solr6 ? allErrors.value.solr6 : allErrors.value.solr6.slice(0, 4),
+                        activemq: showAllErrors.value.activemq ? allErrors.value.activemq : allErrors.value.activemq.slice(0, 4)
+                    };
+                });
+
+                const toggleErrors = (section) => {
+                    showAllErrors.value[section] = !showAllErrors.value[section];
+                };
+
+                const chartInstances = {};
+
+                const generateChartData = (type) => {
+                    let labels = [];
+                    let data = [];
+                    const now = new Date();
+
+                    if (type === 'day') {
+                        const thirtyDaysAgo = new Date(now);
+                        thirtyDaysAgo.setDate(now.getDate() - 30);
+                        for (let d = new Date(thirtyDaysAgo); d <= now; d.setDate(d.getDate() + 1)) {
+                            labels.push(d.toLocaleDateString('th-TH'));
+                            data.push(Math.floor(Math.random() * 50) + 950);
+                        }
+                    } else if (type === 'week') {
+                        for (let i = 0; i < 12; i++) {
+                            labels.push(`สัปดาห์ ${i + 1}`);
+                            data.push(Math.floor(Math.random() * 50) + 950);
+                        }
+                    } else if (type === 'month') {
+                        for (let i = 0; i < 3; i++) {
+                            labels.push(`เดือน ${now.getMonth() - i + 1}`);
+                            data.push(Math.floor(Math.random() * 50) + 950);
+                        }
+                    }
+
+                    return {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Status 200',
+                                data: data,
+                                backgroundColor: 'rgba(34, 197, 94, 0.2)', /* Green-500 */
+                                borderColor: 'rgba(34, 197, 94, 1)', /* Green-500 */
+                                borderWidth: 1,
+                                tension: 0.4,
+                                fill: true,
+                            }
+                        ]
+                    };
+                };
+
+                const createChart = (elementId, type) => {
+                    const ctx = document.getElementById(elementId).getContext('2d');
+                    if (chartInstances[elementId]) {
+                        chartInstances[elementId].destroy();
+                    }
+                    chartInstances[elementId] = new Chart(ctx, {
+                        type: 'line',
+                        data: generateChartData(timeframe.value[type]),
+                        options: {
+                            responsive: true,
+                            scales: {
+                                y: {
+                                    beginAtZero: false,
+                                    max: 1000,
+                                    title: {
+                                        display: true,
+                                        text: 'จำนวนการยิง API'
+                                    }
+                                },
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: `ช่วงเวลา (${timeframe.value[type]})`
+                                    }
+                                }
+                            },
+                            plugins: {
+                                legend: {
+                                    display: false
+                                },
+                                tooltip: {
+                                    mode: 'index',
+                                    intersect: false
+                                }
+                            }
+                        }
+                    });
+                };
+                
+                const createDiskUsageCharts = () => {
+                    const labels = ['ม.ค. 2024', 'ก.พ. 2024', 'มี.ค. 2024', 'เม.ย. 2024', 'พ.ค. 2024', 'มิ.ย. 2024'];
+                    const server1Data = [180, 185, 190, 200, 205, 215];
+                    const server2Data = [220, 225, 235, 250, 255, 260];
+                    const server3Data = [280, 290, 295, 300, 310, 320];
+
+                    const chartConfig = (data, label) => ({
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: label,
+                                data: data,
+                                borderColor: 'rgb(34, 197, 94)', /* Green-500 */
+                                backgroundColor: 'rgba(34, 197, 94, 0.2)', /* Green-500 */
+                                tension: 0.4,
+                                fill: true
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    title: {
+                                        display: true,
+                                        text: 'การใช้งานพื้นที่ดิสก์ (GB)'
+                                    }
+                                },
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'เดือน'
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    new Chart(document.getElementById('server1-chart'), chartConfig(server1Data, 'allops-prod-svr-01'));
+                    new Chart(document.getElementById('server2-chart'), chartConfig(server2Data, 'allops-prod-svr-02'));
+                    new Chart(document.getElementById('server3-chart'), chartConfig(server3Data, 'allops-prod-svr-03'));
+                }
+
+
+                const showTab = (tabName) => {
+                    activeTab.value = tabName;
+                    if (tabName === 'health-errors') {
+                        nextTick(() => {
+                            createChart('workspacePrdChart', 'workspace');
+                            createChart('workspaceUatChart', 'workspace');
+                            createChart('databasePrdChart', 'database');
+                            createChart('databaseUatChart', 'database');
+                            createChart('solr6PrdChart', 'solr6');
+                            createChart('solr6UatChart', 'solr6');
+                            createChart('activemqPrdChart', 'activemq');
+                            createChart('activemqUatChart', 'activemq');
+                        });
+                    }
+                    if (tabName === 'overview') {
+                         nextTick(() => {
+                            createDiskUsageCharts();
+                        });
+                    }
+                };
+                
+                const generateReport = () => {
+                    const projectSelect = document.getElementById('project-select');
+                    const dateInput = document.getElementById('date-start');
+                    customerName.value = projectSelect.value;
+                    pmDate.value = dateInput.value;
+                    showTab('project-details');
+                };
+
+                onMounted(() => {
+                    showTab('project-details');
+                });
+                
+
+                return {
+                    activeTab,
+                    customerName,
+                    pmDate,
+                    timeframe,
+                    allErrors,
+                    displayedErrors,
+                    showAllErrors,
+                    toggleErrors,
+                    showTab,
+                    generateReport
+                };
+            },
+        }).mount('#app');
+    </script>
+</body>
+</html>

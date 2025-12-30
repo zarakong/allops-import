@@ -10,6 +10,7 @@ import UploadPM from './pages/UploadPM';
 import PMImport from './pages/PMImport';
 import PMDetails from './pages/PMDetails';
 import NewServer from './pages/NewServer';
+import Settings from './pages/Settings';
 import './index.css';
 
 const App: React.FC = () => {
@@ -29,6 +30,7 @@ const App: React.FC = () => {
             <Route path="/pm/:pmId" element={<PMDetails />} />
             <Route path="/pm/import" element={<PMImport />} />
             <Route path="/upload-pm" element={<UploadPM />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="/" element={<Report />} />
           </Routes>
         </main>

@@ -1,7 +1,6 @@
 import axios from 'axios';
 import { } from '../types';
-
-const API_BASE_URL = 'http://localhost:5000';
+import { API_BASE_URL } from './config';
 
 export const fetchPMPlansByCustomer = async (custId: number, opts?: { q?: string; pm_year?: string }): Promise<any[]> => {
   try {
@@ -177,6 +176,32 @@ export const importAlfrescoApiData = async (pmId: number, custCode: string, json
   }
 };
 
+export const importAppContentSizingData = async (pmId: number, custCode: string, jsonData: any[]): Promise<any> => {
+  try {
+    const payload = { pm_id: pmId, cust_code: custCode, jsonData };
+    const response = await axios.post(`${API_BASE_URL}/api/pm/import/app-content-sizing`, payload, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error importing application sizing data:', error);
+    throw error;
+  }
+};
+
+export const importAppOtherApiData = async (pmId: number, custCode: string, envId: number, jsonData: any[]): Promise<any> => {
+  try {
+    const payload = { pm_id: pmId, cust_code: custCode, env_id: envId, jsonData };
+    const response = await axios.post(`${API_BASE_URL}/api/pm/import/app-responses`, payload, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error importing application other API responses:', error);
+    throw error;
+  }
+};
+
 const api = {
   fetchPMPlansByCustomer,
   fetchPMPlans,
@@ -192,7 +217,9 @@ const api = {
   fetchAppContentSizing,
   fetchAppOtherApiResponses,
   importPMData,
-  importAlfrescoApiData
+  importAlfrescoApiData,
+  importAppContentSizingData,
+  importAppOtherApiData
 };
 
 export default api;

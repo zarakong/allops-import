@@ -14,10 +14,20 @@ const NewServer: React.FC = () => {
 
   useEffect(() => {
     if (!custId) return;
-    fetchCustomerEnvs(custId).then(rows => {
-      // rows: { cust_id, env_id, env_name, server_id }
-      setEnvs(rows.map((r: any) => ({ env_id: Number(r.env_id), env_name: r.env_name })));
-    }).catch(err => console.error(err));
+    fetchCustomerEnvs(custId)
+      .then(rows => {
+        // rows: { cust_id, env_id, env_name, server_id }
+        const deduped = new Map<number, string>();
+        rows.forEach((r: any) => {
+          const envId = Number(r.env_id);
+          if (!envId || deduped.has(envId)) {
+            return;
+          }
+          deduped.set(envId, r.env_name);
+        });
+        setEnvs(Array.from(deduped.entries()).map(([env_id, env_name]) => ({ env_id, env_name })));
+      })
+      .catch(err => console.error(err));
   }, [custId]);
 
   const handleAdd = () => {

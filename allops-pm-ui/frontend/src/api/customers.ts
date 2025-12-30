@@ -1,7 +1,6 @@
 import axios from 'axios';
 import { Customer } from '../types';
-
-const API_BASE_URL = 'http://localhost:5000';
+import { API_BASE_URL } from './config';
 
 export const fetchCustomers = async (): Promise<Customer[]> => {
   try {
@@ -110,6 +109,80 @@ export const createCustomerServerEnvs = async (custId: number, payload: { entrie
     return response.data;
   } catch (error) {
     console.error('Error creating customer server envs:', error);
+    throw error;
+  }
+};
+
+export const fetchCustomerDiagram = async (custId: number): Promise<DiagramUploadResponse | null> => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/api/customers/${custId}/diagram-project`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching customer diagram:', error);
+    throw error;
+  }
+};
+
+export const fetchCustomerDiagramImage = async (
+  custId: number,
+  options?: { signal?: AbortSignal; cacheBust?: number }
+): Promise<Blob> => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/api/customers/${custId}/diagram-project/image`, {
+      responseType: 'blob',
+      signal: options?.signal,
+      params: { cacheBust: options?.cacheBust ?? Date.now() },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching customer diagram image:', error);
+    throw error;
+  }
+};
+
+export interface DiagramUploadResponse {
+  link_id: number;
+  url: string;
+  created_date: string;
+  file_name?: string;
+  source?: string;
+  mode?: 'TEST' | 'PRD';
+}
+
+export interface DiagramWebhookHealth {
+  status: 'ok';
+  mode: 'TEST' | 'PRD';
+  url: string;
+  upstreamStatus: number;
+  checkedAt: string;
+}
+
+export const uploadCustomerDiagram = async (
+  custId: number,
+  payload: { file?: File; externalUrl?: string }
+): Promise<DiagramUploadResponse> => {
+  try {
+    const formData = new FormData();
+    if (payload.file) {
+      formData.append('diagram', payload.file);
+    }
+    if (payload.externalUrl) {
+      formData.append('externalUrl', payload.externalUrl);
+    }
+    const response = await axios.post(`${API_BASE_URL}/api/customers/${custId}/diagram-project`, formData);
+    return response.data;
+  } catch (error) {
+    console.error('Error uploading customer diagram:', error);
+    throw error;
+  }
+};
+
+export const checkDiagramWebhookHealth = async (): Promise<DiagramWebhookHealth> => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/api/customers/diagram-webhook-health`);
+    return response.data;
+  } catch (error) {
+    console.error('Error checking diagram webhook health:', error);
     throw error;
   }
 };

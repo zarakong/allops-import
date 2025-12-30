@@ -1,5 +1,190 @@
 import { Request, Response } from 'express';
+import axios from 'axios';
+import FormData from 'form-data';
+import mime from 'mime-types';
 import { query } from '../db';
+import logger from '../utils/logger';
+import { getN8nWebhookConfig, WebhookMode } from '../utils/n8nConfig';
+
+const DATA_URL_REGEX = /^data:(?<mime>[^;]+);base64,(?<data>.+)$/i;
+const HTTP_URL_REGEX = /^https?:\/\//i;
+const MAX_FILE_SIZE_BYTES = Number(process.env.DIAGRAM_MAX_FILE_MB || 5) * 1024 * 1024;
+const PNG_EXTENSION = 'png';
+
+type ResolvedFile = {
+    buffer: Buffer;
+    mimetype: string;
+    originalname: string;
+    size: number;
+};
+
+const parseDataUrlToFile = (raw: string): ResolvedFile | null => {
+    const match = raw.match(DATA_URL_REGEX);
+    if (!match || !match.groups?.mime || !match.groups?.data) {
+        return null;
+    }
+    const buffer = Buffer.from(match.groups.data, 'base64');
+    return {
+        buffer,
+        mimetype: match.groups.mime,
+        originalname: `diagram.${mime.extension(match.groups.mime) || 'png'}`,
+        size: buffer.length,
+    };
+};
+
+const sanitizeCustCode = (code: string) => code.replace(/[^A-Za-z0-9_-]/g, '').toUpperCase() || 'CUST';
+
+const formatTimestampForName = (date: Date) => {
+    const pad = (value: number) => value.toString().padStart(2, '0');
+    return [
+        date.getFullYear(),
+        pad(date.getMonth() + 1),
+        pad(date.getDate()),
+        pad(date.getHours()),
+        pad(date.getMinutes()),
+        pad(date.getSeconds()),
+    ].join('_');
+};
+
+const resolveExtension = (mimeType: string, originalName?: string) => {
+    const extFromMime = mime.extension(mimeType || '') || '';
+    if (extFromMime) {
+        return extFromMime;
+    }
+    if (originalName && originalName.includes('.')) {
+        return originalName.split('.').pop() || 'bin';
+    }
+    return 'bin';
+};
+
+const isPngFile = (file: ResolvedFile) => {
+    const mimeType = (file.mimetype || '').toLowerCase();
+    if (mimeType && mimeType !== 'image/png') {
+        return false;
+    }
+    const original = (file.originalname || '').toLowerCase();
+    if (original.endsWith(`.${PNG_EXTENSION}`)) {
+        return true;
+    }
+    const derived = resolveExtension(file.mimetype, file.originalname).toLowerCase();
+    return derived === PNG_EXTENSION;
+};
+
+const resolveDiagramCandidateUrls = (rawUrl: string | null | undefined): string[] => {
+    if (!rawUrl) return [];
+    const trimmed = rawUrl.trim();
+    if (!trimmed) return [];
+
+    const urls: string[] = [];
+    const pushUnique = (candidate?: string | null) => {
+        if (!candidate) return;
+        const normalized = candidate.trim();
+        if (!normalized) return;
+        if (!urls.includes(normalized)) {
+            urls.push(normalized);
+        }
+    };
+
+    const fileMatch = trimmed.match(/https?:\/\/drive\.google\.com\/file\/d\/([^/]+)/i);
+    const openMatch = trimmed.match(/https?:\/\/drive\.google\.com\/open\?id=([^&]+)/i);
+    const ucMatch = trimmed.match(/https?:\/\/drive\.google\.com\/uc\?(?:export=(?:view|download)&)?id=([^&]+)/i);
+    const fileId = fileMatch?.[1] ?? openMatch?.[1] ?? ucMatch?.[1] ?? null;
+
+    if (fileId) {
+        pushUnique(`https://drive.google.com/thumbnail?id=${fileId}&sz=w2000`);
+        pushUnique(`https://drive.google.com/uc?id=${fileId}`);
+        pushUnique(`https://drive.google.com/uc?export=download&id=${fileId}`);
+        pushUnique(`https://drive.google.com/uc?export=view&id=${fileId}`);
+        pushUnique(`https://drive.google.com/file/d/${fileId}/preview`);
+    }
+
+    pushUnique(trimmed);
+    return urls;
+};
+
+type DiagramRow = {
+    link_id: string | number;
+    url: string;
+    type: string;
+    created_at: string;
+    created_date: string;
+};
+
+const DIAGRAM_POLL_TIMEOUT_MS = Number(process.env.DIAGRAM_POLL_TIMEOUT_MS || 20000);
+const DIAGRAM_POLL_INTERVAL_MS = Number(process.env.DIAGRAM_POLL_INTERVAL_MS || 1500);
+const DIAGRAM_POLL_MIN_DIFF_MS = Number(process.env.DIAGRAM_POLL_MIN_DIFF_MS || 250);
+const DIAGRAM_PROXY_TIMEOUT_MS = Number(process.env.DIAGRAM_PROXY_TIMEOUT_MS || 15000);
+
+const LATEST_DIAGRAM_SQL = `
+SELECT link_id,
+       url,
+       type,
+       created_at,
+       to_char(created_at AT TIME ZONE 'Asia/Bangkok', 'YYYY-MM-DD HH24:MI:SS') AS created_date
+FROM public.url_share
+WHERE cust_id = $1
+  AND LOWER(type) = 'project'
+ORDER BY created_at DESC
+LIMIT 1;
+`;
+
+const fetchLatestDiagramRow = async (custId: string | number): Promise<DiagramRow | null> => {
+    const result = await query(LATEST_DIAGRAM_SQL, [custId]);
+    return result.rows && result.rows.length > 0 ? result.rows[0] : null;
+};
+
+const insertDiagramRow = async (custId: string | number, url: string): Promise<DiagramRow> => {
+    const result = await query(
+        `INSERT INTO public.url_share (cust_id, url, type, created_at)
+         VALUES ($1, $2, 'project', now())
+         RETURNING link_id,
+                   url,
+                   type,
+                   created_at,
+                   to_char(created_at AT TIME ZONE 'Asia/Bangkok', 'YYYY-MM-DD HH24:MI:SS') AS created_date;`,
+        [custId, url]
+    );
+    return result.rows[0];
+};
+
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const toMillis = (value?: string | number | Date | null) => {
+    if (!value) return null;
+    const candidate = value instanceof Date ? value.getTime() : new Date(value).getTime();
+    return Number.isNaN(candidate) ? null : candidate;
+};
+
+const hasDiagramChanged = (previous: DiagramRow | null, current: DiagramRow | null) => {
+    if (!current) return false;
+    if (!previous) return true;
+    const prevId = Number(previous.link_id) || 0;
+    const currId = Number(current.link_id) || 0;
+    if (prevId && currId && currId !== prevId) {
+        return true;
+    }
+    const prevTs = toMillis(previous.created_at);
+    const currTs = toMillis(current.created_at);
+    if (prevTs === null && currTs !== null) {
+        return true;
+    }
+    if (prevTs !== null && currTs !== null && currTs - prevTs > DIAGRAM_POLL_MIN_DIFF_MS) {
+        return true;
+    }
+    return false;
+};
+
+const waitForDiagramUpdate = async (custId: string | number, baseline: DiagramRow | null) => {
+    const started = Date.now();
+    while (Date.now() - started < DIAGRAM_POLL_TIMEOUT_MS) {
+        const latest = await fetchLatestDiagramRow(custId);
+        if (hasDiagramChanged(baseline, latest)) {
+            return latest;
+        }
+        await wait(DIAGRAM_POLL_INTERVAL_MS);
+    }
+    return null;
+};
 
 // Get all customers
 export const getCustomers = async (req: Request, res: Response) => {
@@ -315,8 +500,10 @@ FROM public.customer_env ce
 JOIN public.env e ON ce.env_id = e.env_id
 LEFT JOIN public.server_env se ON se.server_id = ce.server_id
 WHERE ce.cust_id = $1
-    AND ce.server_id > 0
-ORDER BY e.env_name, se.server_name, ce.server_id
+ORDER BY e.env_name,
+         CASE WHEN se.server_name IS NULL OR TRIM(se.server_name) = '' THEN 1 ELSE 0 END,
+         se.server_name,
+         ce.server_id
         `;
         const result = await query(sql, [id]);
         res.status(200).json(result.rows);
@@ -404,5 +591,282 @@ export const addCustomerServerEnvs = async (req: Request, res: Response) => {
         console.error('Error adding customer server envs:', error);
         try { await query('ROLLBACK'); } catch (e) { console.error('Rollback error', e); }
         res.status(500).json({ error: 'Internal server error', detail: (error as any).message });
+    }
+};
+
+export const getCustomerDiagramProject = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    try {
+        const latest = await fetchLatestDiagramRow(id);
+        return res.status(200).json(latest);
+    } catch (error) {
+        console.error('Error fetching customer diagram project:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+export const proxyCustomerDiagramImage = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    if (!id) {
+        return res.status(400).json({ error: 'Missing customer id' });
+    }
+
+    try {
+        const latest = await fetchLatestDiagramRow(id);
+        if (!latest || !latest.url) {
+            return res.status(404).json({ error: 'Diagram not found' });
+        }
+
+        const candidates = resolveDiagramCandidateUrls(latest.url);
+        if (candidates.length === 0) {
+            return res.status(404).json({ error: 'Diagram URL is empty' });
+        }
+
+        let lastError: any = null;
+        for (const candidate of candidates) {
+            try {
+                logger.info('proxyCustomerDiagramImage fetching candidate', { custId: id, candidate });
+                const response = await axios.get<ArrayBuffer>(candidate, {
+                    responseType: 'arraybuffer',
+                    timeout: DIAGRAM_PROXY_TIMEOUT_MS,
+                    maxRedirects: 5,
+                    validateStatus: (status) => status >= 200 && status < 400,
+                    headers: {
+                        Accept: 'image/png,image/*;q=0.9,*/*;q=0.8',
+                        'User-Agent': 'AllOps PM Importer/1.0',
+                    },
+                });
+
+                const buffer = Buffer.from(response.data);
+                if (!buffer || buffer.length === 0) {
+                    throw new Error('Empty payload from upstream diagram URL');
+                }
+
+                const contentType = (response.headers['content-type'] as string) || 'image/png';
+                res.setHeader('Content-Type', contentType);
+                if (response.headers['cache-control']) {
+                    res.setHeader('Cache-Control', response.headers['cache-control'] as string);
+                } else {
+                    res.setHeader('Cache-Control', 'private, max-age=60');
+                }
+                if (response.headers['etag']) {
+                    res.setHeader('ETag', response.headers['etag'] as string);
+                }
+                if (response.headers['last-modified']) {
+                    res.setHeader('Last-Modified', response.headers['last-modified'] as string);
+                }
+                res.setHeader('Content-Length', buffer.length.toString());
+
+                return res.status(200).send(buffer);
+            } catch (candidateError: any) {
+                lastError = candidateError;
+                logger.warn('proxyCustomerDiagramImage candidate failed', {
+                    custId: id,
+                    candidate,
+                    message: candidateError?.message,
+                    status: candidateError?.response?.status,
+                });
+            }
+        }
+
+        return res.status(502).json({
+            error: 'ไม่สามารถโหลดรูปไดอะแกรมจากลิงก์ที่ให้มาได้',
+            detail: lastError?.message || null,
+        });
+    } catch (error) {
+        logger.error('proxyCustomerDiagramImage error', { custId: id, error });
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+export const uploadCustomerDiagramProject = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    if (!id) {
+        return res.status(400).json({ error: 'Missing customer id' });
+    }
+
+    const incomingFile = (req as Request & { file?: Express.Multer.File }).file || null;
+    const externalUrlRaw = typeof req.body?.externalUrl === 'string' ? req.body.externalUrl.trim() : '';
+    const imageDataRaw = typeof req.body?.imageData === 'string' ? req.body.imageData.trim() : '';
+
+    let resolvedFile: ResolvedFile | null = null;
+    if (incomingFile) {
+        resolvedFile = {
+            buffer: incomingFile.buffer,
+            mimetype: incomingFile.mimetype,
+            originalname: incomingFile.originalname,
+            size: incomingFile.size,
+        };
+    } else if (imageDataRaw) {
+        const parsed = parseDataUrlToFile(imageDataRaw);
+        if (!parsed) {
+            return res.status(400).json({ error: 'Invalid base64 image data' });
+        }
+        resolvedFile = parsed;
+    }
+
+    if (!resolvedFile && !externalUrlRaw) {
+        return res.status(400).json({ error: 'Missing diagram payload' });
+    }
+
+    if (resolvedFile && !isPngFile(resolvedFile)) {
+        return res.status(400).json({ error: 'Diagram file must be a PNG image' });
+    }
+
+    if (resolvedFile && resolvedFile.size > MAX_FILE_SIZE_BYTES) {
+        const limitMb = (MAX_FILE_SIZE_BYTES / (1024 * 1024)).toFixed(1);
+        return res.status(400).json({ error: `File size exceeds ${limitMb} MB limit` });
+    }
+
+    try {
+        const customerResult = await query('SELECT cust_code FROM public.customer WHERE cust_id = $1', [id]);
+        if (customerResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Customer not found' });
+        }
+        const custCode = sanitizeCustCode(customerResult.rows[0].cust_code || `CUST${id}`);
+
+        if (resolvedFile) {
+            const config = await getN8nWebhookConfig();
+            const baselineDiagram = await fetchLatestDiagramRow(id);
+            if (!config.activeUrl) {
+                return res.status(500).json({ error: 'N8N webhook URL is not configured' });
+            }
+
+            const timestamp = formatTimestampForName(new Date());
+            const extension = PNG_EXTENSION;
+            const fileName = `${custCode}_diagram_${timestamp}.${extension}`;
+
+            const form = new FormData();
+            form.append('myFile', resolvedFile.buffer, {
+                filename: fileName,
+                contentType: 'image/png',
+            });
+            form.append('status', 'Active');
+            form.append('doctype', 'project');
+            form.append('custid', id.toString());
+            form.append('extention', '');
+
+            try {
+                logger.info('Sending diagram to n8n webhook', {
+                    url: config.activeUrl,
+                    mode: config.mode,
+                    fileName,
+                    size: resolvedFile.size,
+                });
+                const webhookResponse = await axios.post(config.activeUrl, form, {
+                    headers: form.getHeaders(),
+                    maxBodyLength: Infinity,
+                    maxContentLength: Infinity,
+                    timeout: Number(process.env.N8N_TIMEOUT_MS || 30000),
+                });
+                const data = webhookResponse.data;
+                let shareableUrl: string | null = null;
+                if (typeof data?.publicUrl === 'string') {
+                    shareableUrl = data.publicUrl;
+                } else if (typeof data?.url === 'string') {
+                    shareableUrl = data.url;
+                } else if (typeof data?.data?.publicUrl === 'string') {
+                    shareableUrl = data.data.publicUrl;
+                }
+
+                if (!shareableUrl) {
+                    logger.warn('n8n webhook response missing shareable URL; waiting for DB update', { data });
+                }
+
+                const downstreamDiagram = await waitForDiagramUpdate(id, baselineDiagram);
+                if (downstreamDiagram) {
+                    return res.status(201).json({
+                        ...downstreamDiagram,
+                        file_name: fileName,
+                        source: 'n8n',
+                        mode: config.mode,
+                    });
+                }
+
+                if (shareableUrl) {
+                    const inserted = await insertDiagramRow(id, shareableUrl);
+                    return res.status(201).json({
+                        ...inserted,
+                        file_name: fileName,
+                        source: 'n8n',
+                        mode: config.mode,
+                    });
+                }
+
+                return res.status(502).json({ error: 'Workflow did not return a shareable URL before timing out' });
+            } catch (error: any) {
+                logger.error('Error calling n8n webhook', {
+                    message: error?.message,
+                    status: error?.response?.status,
+                    data: error?.response?.data,
+                });
+                return res.status(502).json({
+                    error: 'Failed to upload diagram through workflow',
+                    detail: error?.response?.data || error?.message,
+                });
+            }
+        }
+
+        if (externalUrlRaw) {
+            if (!HTTP_URL_REGEX.test(externalUrlRaw)) {
+                return res.status(400).json({ error: 'externalUrl must start with http or https' });
+            }
+            const inserted = await insertDiagramRow(id, externalUrlRaw);
+            return res.status(201).json({
+                ...inserted,
+                file_name: null,
+                source: 'external',
+                mode: null,
+            });
+        }
+
+        return res.status(400).json({ error: 'Unable to resolve diagram URL' });
+    } catch (error) {
+        logger.error('Error uploading customer diagram project', { error });
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+export const checkDiagramWebhookHealth = async (_req: Request, res: Response) => {
+    try {
+        const config = await getN8nWebhookConfig();
+        if (!config.activeUrl) {
+            return res.status(503).json({ error: 'Webhook URL not configured' });
+        }
+
+        try {
+            const response = await axios.get(config.activeUrl, {
+                timeout: Number(process.env.N8N_HEALTH_TIMEOUT_MS || process.env.N8N_TIMEOUT_MS || 10000),
+                params: { health: '1' },
+            });
+
+            if (response.status < 200 || response.status >= 300) {
+                return res.status(502).json({
+                    error: 'Webhook responded with unexpected status',
+                    upstreamStatus: response.status,
+                });
+            }
+
+            return res.status(200).json({
+                status: 'ok',
+                mode: config.mode,
+                url: config.activeUrl,
+                upstreamStatus: response.status,
+                checkedAt: new Date().toISOString(),
+            });
+        } catch (error: any) {
+            logger.error('Diagram webhook health check failed', {
+                message: error?.message,
+                status: error?.response?.status,
+                data: error?.response?.data,
+            });
+            return res.status(502).json({
+                error: 'Webhook unreachable',
+                detail: error?.response?.data || error?.message,
+            });
+        }
+    } catch (error) {
+        logger.error('Unexpected error during webhook health check', { error });
+        return res.status(500).json({ error: 'Internal server error' });
     }
 };

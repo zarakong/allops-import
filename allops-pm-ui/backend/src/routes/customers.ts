@@ -1,7 +1,14 @@
 import express from 'express';
-import { getCustomers, createCustomer, updateCustomer, getCustomerPMPlans, getCustomerById, getCustomerServers, createCustomerBatch, getEnvs, getCustomerEnvs, addCustomerServerEnvs, getCustomerWorkspaceDetails } from '../controllers/customersController';
+import multer from 'multer';
+import { getCustomers, createCustomer, updateCustomer, getCustomerPMPlans, getCustomerById, getCustomerServers, createCustomerBatch, getEnvs, getCustomerEnvs, addCustomerServerEnvs, getCustomerWorkspaceDetails, getCustomerDiagramProject, uploadCustomerDiagramProject, checkDiagramWebhookHealth, proxyCustomerDiagramImage } from '../controllers/customersController';
 
 const router = express.Router();
+const upload = multer({
+	storage: multer.memoryStorage(),
+	limits: {
+		fileSize: Number(process.env.DIAGRAM_MAX_FILE_MB || 5) * 1024 * 1024,
+	},
+});
 
 // Route to get all customers
 router.get('/', getCustomers);
@@ -17,6 +24,9 @@ router.get('/debug/apps-all', getAllAppDetails);
 // Route to list env values (must be before routes with :id)
 router.get('/envs', getEnvs);
 
+// Diagram webhook health
+router.get('/diagram-webhook-health', checkDiagramWebhookHealth);
+
 // Route to get single customer by id
 router.get('/:id', getCustomerById);
 
@@ -31,6 +41,11 @@ router.get('/:id/envs', getCustomerEnvs);
 
 // Workspace details per environment for specific customer
 router.get('/:id/workspace-details', getCustomerWorkspaceDetails);
+
+// Diagram project image for specific customer
+router.get('/:id/diagram-project/image', proxyCustomerDiagramImage);
+router.get('/:id/diagram-project', getCustomerDiagramProject);
+router.post('/:id/diagram-project', upload.single('diagram'), uploadCustomerDiagramProject);
 
 // Add server_env rows and link to customer_env for a specific customer
 router.post('/:id/server-envs', addCustomerServerEnvs);

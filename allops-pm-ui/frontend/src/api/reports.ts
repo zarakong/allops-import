@@ -1,7 +1,6 @@
 import axios from 'axios';
 import { ReportType } from '../types';
-
-const API_BASE_URL = 'http://localhost:5000';
+import { API_BASE_URL } from './config';
 
 export const fetchReports = async (): Promise<ReportType[]> => {
   try {

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { fetchPMById, fetchCustomerById, fetchImportHeader, fetchAlfrescoApiResponses, fetchAppContentSizing, fetchAppOtherApiResponses, importPMData, importAlfrescoApiData } from '../api/pm';
+import { fetchPMById, fetchCustomerById, fetchImportHeader, fetchAlfrescoApiResponses, fetchAppContentSizing, fetchAppOtherApiResponses, importPMData, importAlfrescoApiData, importAppContentSizingData, importAppOtherApiData } from '../api/pm';
 
 type HeaderInfo = {
   cust_id?: number | string;
@@ -70,6 +70,7 @@ const PMImport: React.FC = () => {
   const [appRows, setAppRows] = useState<AppSizingRow[]>([]);
   const [appLoading, setAppLoading] = useState(false);
   const [appError, setAppError] = useState<string | null>(null);
+  const [appImporting, setAppImporting] = useState(false);
   const [appSelectedEnvId, setAppSelectedEnvId] = useState<string>('all');
   const csvInputRef = useRef<HTMLInputElement | null>(null);
   const appCsvInputRef = useRef<HTMLInputElement | null>(null);
@@ -78,8 +79,26 @@ const PMImport: React.FC = () => {
   const [appOtherError, setAppOtherError] = useState<string | null>(null);
   const [appOtherSelectedEnvId, setAppOtherSelectedEnvId] = useState<string>('all');
   const appOtherCsvInputRef = useRef<HTMLInputElement | null>(null);
+  const [appOtherImporting, setAppOtherImporting] = useState(false);
   const [importing, setImporting] = useState<Record<string, boolean>>({});
   const pmCsvInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const parseJsonRecords = (text: string): any[] => {
+    try {
+      const parsed = JSON.parse(text);
+      return Array.isArray(parsed) ? parsed : [parsed];
+    } catch (primaryError) {
+      const lines = text.trim().split(/\r?\n/).filter((line) => line.trim().length > 0);
+      if (lines.length === 0) {
+        throw new Error('EMPTY_FILE');
+      }
+      try {
+        return lines.map((line) => JSON.parse(line));
+      } catch (ndjsonError) {
+        throw new Error('INVALID_JSON');
+      }
+    }
+  };
 
   useEffect(() => {
     const loadHeader = async () => {
@@ -108,19 +127,23 @@ const PMImport: React.FC = () => {
             }
 
             if (Array.isArray(resp?.envs)) {
-              const rows: EnvRow[] = resp.envs.map((r: any) => ({
-                cust_id: r.cust_id,
-                env_id: r.env_id,
-                env_name: r.env_name,
-                server_id: r.server_id,
-                server_name: r.server_name,
-                has_pm_round: r.has_pm_round
-              }));
+              const rows: EnvRow[] = resp.envs.map((r: any) => {
+                const parsedServerId = Number(r.server_id);
+                const serverId = Number.isFinite(parsedServerId) ? parsedServerId : 0;
+                return {
+                  cust_id: r.cust_id,
+                  env_id: r.env_id,
+                  env_name: r.env_name,
+                  server_id: serverId,
+                  server_name: r.server_name,
+                  has_pm_round: r.has_pm_round
+                };
+              });
               setEnvRows(rows);
 
               const serverMap: Record<number, string> = {};
               rows.forEach((row) => {
-                if (row.server_id) {
+                if (row.server_id > 0) {
                   serverMap[row.server_id] = row.server_name || String(row.server_id);
                 }
               });
@@ -128,8 +151,10 @@ const PMImport: React.FC = () => {
 
               const statusMap: Record<string, { exists: boolean }> = {};
               rows.forEach((row) => {
-                const key = `${row.env_id}:${row.server_id}`;
-                statusMap[key] = { exists: !!row.has_pm_round };
+                if (row.server_id > 0) {
+                  const key = `${row.env_id}:${row.server_id}`;
+                  statusMap[key] = { exists: !!row.has_pm_round };
+                }
               });
               setPmStatuses(statusMap);
             }
@@ -342,6 +367,8 @@ const PMImport: React.FC = () => {
   const resolvedCustName = pickDisplayValue([header.cust_name, custNameParam], '');
   const resolvedCustCode = pickDisplayValue([header.cust_code, custCodeParam], '');
 
+  const validEnvRows = useMemo(() => envRows.filter((row) => Number(row.server_id) > 0), [envRows]);
+
   const envUniqueRows = useMemo(() => {
     const map = new Map<number, EnvRow>();
     envRows.forEach((row) => {
@@ -351,13 +378,13 @@ const PMImport: React.FC = () => {
   }, [envRows]);
 
   const allPmEnvsComplete = useMemo(() => {
-    if (envRows.length === 0) return false;
-    return envRows.every((row) => {
+    if (validEnvRows.length === 0) return false;
+    return validEnvRows.every((row) => {
       const key = `${row.env_id}:${row.server_id}`;
       const status = pmStatuses[key];
       return status && status.exists;
     });
-  }, [envRows, pmStatuses]);
+  }, [validEnvRows, pmStatuses]);
 
   const allAlfEnvsComplete = useMemo(() => {
     if (envUniqueRows.length === 0) return false;
@@ -434,10 +461,17 @@ const PMImport: React.FC = () => {
     mergedAppRows.forEach((row) => {
       map.set(row.env_id, row.env_name);
     });
-    return Array.from(map.entries()).map(([envId, envName]) => ({ envId, envName }));
+    const envOptions = Array.from(map.entries()).map(([envId, envName]) => ({
+      value: String(envId),
+      label: envName
+    })).sort((a, b) => a.label.localeCompare(b.label));
+    return [{ value: 'all', label: 'เลือก env' }, ...envOptions];
   }, [mergedAppRows]);
 
-  const displayedAppRows = mergedAppRows;
+  const displayedAppRows = useMemo(() => {
+    if (appSelectedEnvId === 'all') return mergedAppRows;
+    return mergedAppRows.filter((row) => String(row.env_id) === appSelectedEnvId);
+  }, [mergedAppRows, appSelectedEnvId]);
 
   const mergedAppOtherRows = useMemo(() => {
     const base: AppOtherApiRow[] = Array.isArray(appOtherRows) ? [...appOtherRows] : [];
@@ -479,10 +513,17 @@ const PMImport: React.FC = () => {
     mergedAppOtherRows.forEach((row) => {
       map.set(row.env_id, row.env_name);
     });
-    return Array.from(map.entries()).map(([envId, envName]) => ({ envId, envName }));
+    const envOptions = Array.from(map.entries()).map(([envId, envName]) => ({
+      value: String(envId),
+      label: envName
+    })).sort((a, b) => a.label.localeCompare(b.label));
+    return [{ value: 'all', label: 'เลือก env' }, ...envOptions];
   }, [mergedAppOtherRows]);
 
-  const displayedAppOtherRows = mergedAppOtherRows;
+  const displayedAppOtherRows = useMemo(() => {
+    if (appOtherSelectedEnvId === 'all') return mergedAppOtherRows;
+    return mergedAppOtherRows.filter((row) => String(row.env_id) === appOtherSelectedEnvId);
+  }, [mergedAppOtherRows, appOtherSelectedEnvId]);
 
   const formatDate = (date: string | null) => {
     if (!date) return 'NONE';
@@ -513,27 +554,14 @@ const PMImport: React.FC = () => {
     try {
       const text = await file.text();
       let jsonData: any[];
-
-      // Try to parse as JSON array or NDJSON (newline-delimited JSON)
       try {
-        // First try to parse as standard JSON array
-        jsonData = JSON.parse(text);
-        if (!Array.isArray(jsonData)) {
-          jsonData = [jsonData];
-        }
-      } catch (e) {
-        // If that fails, try parsing as NDJSON (each line is a JSON object)
-        try {
-          const lines = text.trim().split('\n').filter(line => line.trim().length > 0);
-          jsonData = lines.map(line => JSON.parse(line));
-        } catch (ndjsonError) {
+        jsonData = parseJsonRecords(text);
+      } catch (parseError: any) {
+        if (parseError?.message === 'EMPTY_FILE') {
+          alert('ไฟล์ไม่มีข้อมูล');
+        } else {
           alert('ไฟล์ไม่ใช่รูปแบบ JSON หรือ NDJSON ที่ถูกต้อง');
-          return;
         }
-      }
-
-      if (jsonData.length === 0) {
-        alert('ไฟล์ไม่มีข้อมูล');
         return;
       }
 
@@ -560,30 +588,122 @@ const PMImport: React.FC = () => {
   };
 
   const handleAppImportCsvClick = () => {
+    if (appImporting) return;
     appCsvInputRef.current?.click();
   };
 
-  const handleAppCsvSelected: React.ChangeEventHandler<HTMLInputElement> = (event) => {
+  const handleAppCsvSelected: React.ChangeEventHandler<HTMLInputElement> = async (event) => {
     const file = event.target.files?.[0];
-    if (file) {
-      console.info('Selected Application CSV file:', file.name);
-    }
-    if (event.target) {
+    if (!file) return;
+
+    if (!resolvedPmId) {
+      alert('ไม่พบข้อมูล PM ที่ต้องการนำเข้า');
       event.target.value = '';
+      return;
+    }
+    if (!resolvedCustCode) {
+      alert('ไม่พบ Customer code ในหน้า Import');
+      event.target.value = '';
+      return;
+    }
+
+    setAppImporting(true);
+
+    try {
+      const text = await file.text();
+      let jsonData: any[];
+      try {
+        jsonData = parseJsonRecords(text);
+      } catch (parseError: any) {
+        if (parseError?.message === 'EMPTY_FILE') {
+          alert('ไฟล์ไม่มีข้อมูล');
+        } else {
+          alert('ไฟล์ไม่ใช่รูปแบบ JSON หรือ NDJSON ที่ถูกต้อง');
+        }
+        return;
+      }
+
+      await importAppContentSizingData(resolvedPmId, resolvedCustCode, jsonData);
+      alert('นำเข้าข้อมูล Application sizing สำเร็จ');
+      window.location.reload();
+    } catch (error: any) {
+      console.error('Application sizing import error:', error);
+      if (error?.response?.data?.error) {
+        alert(`เกิดข้อผิดพลาด: ${error.response.data.error}`);
+      } else {
+        alert('เกิดข้อผิดพลาดในการนำเข้าข้อมูล Application sizing กรุณาตรวจสอบไฟล์');
+      }
+    } finally {
+      setAppImporting(false);
+      if (event.target) {
+        event.target.value = '';
+      }
     }
   };
 
   const handleAppOtherImportCsvClick = () => {
+    if (appOtherImporting) return;
     appOtherCsvInputRef.current?.click();
   };
 
-  const handleAppOtherCsvSelected: React.ChangeEventHandler<HTMLInputElement> = (event) => {
+  const handleAppOtherCsvSelected: React.ChangeEventHandler<HTMLInputElement> = async (event) => {
     const file = event.target.files?.[0];
-    if (file) {
-      console.info('Selected Application Other API CSV file:', file.name);
-    }
-    if (event.target) {
+    if (!file) return;
+
+    if (!resolvedPmId) {
+      alert('ไม่พบข้อมูล PM ที่ต้องการนำเข้า');
       event.target.value = '';
+      return;
+    }
+    if (!resolvedCustCode) {
+      alert('ไม่พบ Customer code ในหน้า Import');
+      event.target.value = '';
+      return;
+    }
+    if (!appOtherSelectedEnvId || appOtherSelectedEnvId === 'all') {
+      alert('กรุณาเลือก ENV ที่ต้องการนำเข้าก่อน');
+      event.target.value = '';
+      return;
+    }
+
+    const envId = Number(appOtherSelectedEnvId);
+    if (!Number.isFinite(envId) || envId <= 0) {
+      alert('ENV ที่เลือกไม่ถูกต้อง');
+      event.target.value = '';
+      return;
+    }
+
+    setAppOtherImporting(true);
+
+    try {
+      const text = await file.text();
+      let jsonData: any[];
+      try {
+        jsonData = parseJsonRecords(text);
+      } catch (parseError: any) {
+        if (parseError?.message === 'EMPTY_FILE') {
+          alert('ไฟล์ไม่มีข้อมูล');
+        } else {
+          alert('ไฟล์ไม่ใช่รูปแบบ JSON หรือ NDJSON ที่ถูกต้อง');
+        }
+        return;
+      }
+
+      await importAppOtherApiData(resolvedPmId, resolvedCustCode, envId, jsonData);
+      alert('นำเข้าข้อมูล Application Other API Response สำเร็จ');
+      window.location.reload();
+    } catch (error: any) {
+      console.error('Application other API import error:', error);
+      if (error?.response?.data?.error) {
+        alert(`เกิดข้อผิดพลาด: ${error.response.data.error}`);
+      } else {
+        alert('เกิดข้อผิดพลาดในการนำเข้าข้อมูล Application Other API Response กรุณาตรวจสอบไฟล์');
+      }
+    } finally {
+      setAppOtherImporting(false);
+      if (event.target) {
+        event.target.value = '';
+      }
     }
   };
 
@@ -606,15 +726,15 @@ const PMImport: React.FC = () => {
       const text = await file.text();
       const jsonData = JSON.parse(text);
 
-      // Validate customer and env names
-      const payloadCust = jsonData.customer?.toLowerCase().trim();
+      // Validate customer code and env names
+      const payloadCust = (jsonData.cust_code ?? jsonData.customer ?? '').toLowerCase().trim();
       const payloadEnv = jsonData.env?.toLowerCase().trim();
-      const headerCust = resolvedCustName?.toLowerCase().trim();
+      const headerCust = resolvedCustCode?.toLowerCase().trim();
       const envRow = envRows.find((r) => r.env_id === envId);
       const headerEnv = envRow?.env_name?.toLowerCase().trim();
 
-      if (payloadCust !== headerCust) {
-        alert(`ข้อมูลไม่ถูกต้อง: ชื่อลูกค้าไม่ตรงกัน\nคาดหวัง: ${resolvedCustName}\nได้รับ: ${jsonData.customer}`);
+      if (!payloadCust || payloadCust !== headerCust) {
+        alert(`ข้อมูลไม่ถูกต้อง: Customer code ไม่ตรงกัน\nคาดหวัง: ${resolvedCustCode}\nได้รับ: ${jsonData.cust_code || jsonData.customer || 'ไม่มีข้อมูล'}`);
         return;
       }
 
@@ -667,9 +787,9 @@ const PMImport: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {envRows.length === 0 ? (
+                {validEnvRows.length === 0 ? (
                   <tr><td colSpan={3} style={{ padding: 12 }}>ไม่มีข้อมูล env/server สำหรับลูกค้านี้</td></tr>
-                ) : envRows.map((row) => {
+                ) : validEnvRows.map((row) => {
                   const key = `${row.env_id}:${row.server_id}`;
                   const status = pmStatuses[key];
                   const serverLabel = serverNameMap[row.server_id] || (row.server_id ? String(row.server_id) : '-');
@@ -790,13 +910,23 @@ const PMImport: React.FC = () => {
               onChange={(event) => setAppSelectedEnvId(event.target.value)}
               style={{ padding: '6px 8px', borderRadius: 6, border: '1px solid #d1d5db', minWidth: 140 }}
             >
-              <option value="all">ทั้งหมด</option>
               {appEnvOptions.map((opt) => (
-                <option key={opt.envId} value={opt.envId}>{opt.envName}</option>
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
-            <button onClick={handleAppImportCsvClick} style={{ padding: '6px 12px', borderRadius: 6, background: '#06b6d4', color: '#fff', border: 'none' }}>
-              Import CSV
+            <button
+              onClick={handleAppImportCsvClick}
+              disabled={appImporting || appSelectedEnvId === 'all'}
+              style={{
+                padding: '6px 12px',
+                borderRadius: 6,
+                background: appImporting || appSelectedEnvId === 'all' ? '#9ca3af' : '#06b6d4',
+                color: '#fff',
+                border: 'none',
+                cursor: appImporting || appSelectedEnvId === 'all' ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {appSelectedEnvId === 'all' ? 'เลือก env ก่อน' : (appImporting ? 'กำลังนำเข้า...' : 'Import CSV')}
             </button>
             <input
               ref={appCsvInputRef}
@@ -851,13 +981,24 @@ const PMImport: React.FC = () => {
               onChange={(event) => setAppOtherSelectedEnvId(event.target.value)}
               style={{ padding: '6px 8px', borderRadius: 6, border: '1px solid #d1d5db', minWidth: 140 }}
             >
-              <option value="all">ทั้งหมด</option>
               {appOtherEnvOptions.map((opt) => (
-                <option key={opt.envId} value={opt.envId}>{opt.envName}</option>
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
-            <button onClick={handleAppOtherImportCsvClick} style={{ padding: '6px 12px', borderRadius: 6, background: '#06b6d4', color: '#fff', border: 'none' }}>
-              Import CSV
+            <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>เลือก ENV ที่ต้องการก่อนนำเข้า</span>
+            <button
+              onClick={handleAppOtherImportCsvClick}
+              disabled={appOtherImporting || appOtherSelectedEnvId === 'all'}
+              style={{
+                padding: '6px 12px',
+                borderRadius: 6,
+                background: appOtherImporting || appOtherSelectedEnvId === 'all' ? '#9ca3af' : '#06b6d4',
+                color: '#fff',
+                border: 'none',
+                cursor: appOtherImporting || appOtherSelectedEnvId === 'all' ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {appOtherSelectedEnvId === 'all' ? 'เลือก env ก่อน' : (appOtherImporting ? 'กำลังนำเข้า...' : 'Import CSV')}
             </button>
             <input
               ref={appOtherCsvInputRef}

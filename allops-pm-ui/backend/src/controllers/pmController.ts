@@ -295,20 +295,23 @@ export const importPMData = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'pm_id, env_id, and server_id are required in metadata' });
     }
 
+    const normalize = (value?: string | null) => (value || '').toString().trim().toLowerCase();
+
     // Validate customer and env match
-    const custName = payload.customer;
+    const payloadCustCode = normalize(payload.cust_code ?? payload.customer);
     const envName = payload.env;
 
     // Verify customer name matches
-    const custCheck = await query('SELECT c.cust_id, c.cust_name FROM public.customer c JOIN public.pm_plan p ON p.cust_id = c.cust_id WHERE p.pm_id = $1', [pm_id]);
+    const custCheck = await query('SELECT c.cust_id, c.cust_name, c.cust_code FROM public.customer c JOIN public.pm_plan p ON p.cust_id = c.cust_id WHERE p.pm_id = $1', [pm_id]);
     if (custCheck.rows.length === 0) {
       return res.status(404).json({ error: 'PM plan not found' });
     }
-    
-    const dbCustName = custCheck.rows[0].cust_name?.toLowerCase().trim();
-    const payloadCustName = custName?.toLowerCase().trim();
-    if (dbCustName !== payloadCustName) {
-      return res.status(400).json({ error: `Customer name mismatch. Expected: ${custCheck.rows[0].cust_name}, Got: ${custName}` });
+
+    const dbCustCode = normalize(custCheck.rows[0].cust_code);
+    if (!payloadCustCode || payloadCustCode !== dbCustCode) {
+      return res.status(400).json({
+        error: `Customer code mismatch. Expected: ${custCheck.rows[0].cust_code}, Got: ${payload.cust_code || payload.customer || 'N/A'}`
+      });
     }
 
     // Verify env name matches
@@ -336,11 +339,12 @@ export const importPMData = async (req: Request, res: Response) => {
     const servRam = serverSpec.memory?.total_kb || null;
     const servCpuModel = serverSpec.cpu_model_name || null;
     const servCpuCores = serverSpec.cpu?.cores || null;
+    const servDisk = Array.isArray(serverSpec.disk) ? JSON.stringify(serverSpec.disk) : (serverSpec.disk ? JSON.stringify(serverSpec.disk) : null);
 
     const serverInsert = await query(
-      `INSERT INTO public.server (env_id, pm_id, create_at, cust_id, serv_name, serv_os, serv_os_version, serv_ram, serv_cpu_model_name, serv_cpu_cores, server_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING serv_id`,
-      [env_id, pm_id, timestamp, cust_id, servName, servOs, servOsVersion, servRam, servCpuModel, servCpuCores, server_id]
+      `INSERT INTO public.server (env_id, pm_id, create_at, cust_id, serv_name, serv_os, serv_os_version, serv_ram, serv_cpu_model_name, serv_cpu_cores, server_id, serv_disk)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING serv_id`,
+      [env_id, pm_id, timestamp, cust_id, servName, servOs, servOsVersion, servRam, servCpuModel, servCpuCores, server_id, servDisk]
     );
     const servId = serverInsert.rows[0].serv_id;
 
@@ -386,6 +390,280 @@ export const importPMData = async (req: Request, res: Response) => {
   }
 };
 
+export const importAppContentSizingData = async (req: Request, res: Response) => {
+  const normalize = (value?: string | null) => (value || '').toString().trim().toLowerCase();
+
+  try {
+    const { pm_id, cust_code, jsonData } = req.body || {};
+
+    if (!pm_id || !cust_code || !Array.isArray(jsonData) || jsonData.length === 0) {
+      return res.status(400).json({ error: 'pm_id, cust_code และ jsonData (array) จำเป็นต้องระบุ' });
+    }
+
+    const pmResult = await query(
+      `SELECT p.pm_id, p.cust_id, c.cust_code
+       FROM public.pm_plan p
+       JOIN public.customer c ON c.cust_id = p.cust_id
+       WHERE p.pm_id = $1`,
+      [pm_id]
+    );
+
+    if (pmResult.rows.length === 0) {
+      return res.status(404).json({ error: 'ไม่พบ PM plan ที่ระบุ' });
+    }
+
+    const { cust_id: custId, cust_code: dbCustCode } = pmResult.rows[0];
+    if (normalize(dbCustCode) !== normalize(cust_code)) {
+      return res.status(400).json({ error: `Customer code mismatch. Expected: ${dbCustCode}, Got: ${cust_code}` });
+    }
+
+    const envResult = await query(
+      `SELECT e.env_id, e.env_name
+       FROM public.customer_env ce
+       JOIN public.env e ON e.env_id = ce.env_id
+       WHERE ce.cust_id = $1`,
+      [custId]
+    );
+
+    if (envResult.rows.length === 0) {
+      return res.status(400).json({ error: 'ลูกค้ายังไม่มี Environment ที่ผูกไว้' });
+    }
+
+    const envMap = new Map<string, number>();
+    envResult.rows.forEach((row: any) => {
+      envMap.set(normalize(row.env_name), Number(row.env_id));
+    });
+
+    const toYearMonth = (value: any): string | null => {
+      if (value === undefined || value === null) return null;
+      const text = String(value).trim();
+      if (!text) return null;
+
+      const directMatch = text.match(/^(\d{4})[-/](\d{1,2})/);
+      if (directMatch) {
+        const month = directMatch[2].padStart(2, '0');
+        return `${directMatch[1]}-${month}`;
+      }
+
+      const parsed = new Date(text);
+      if (!Number.isNaN(parsed.getTime())) {
+        const year = parsed.getFullYear();
+        const month = String(parsed.getMonth() + 1).padStart(2, '0');
+        return `${year}-${month}`;
+      }
+
+      return null;
+    };
+
+    const deriveYearMonth = (row: any): string | null => {
+      const candidates = [
+        row?.year_month_file,
+        row?.Year_month_file,
+        row?.year_month,
+        row?.date,
+        row?.datetime,
+        row?.timestamp
+      ];
+      for (const candidate of candidates) {
+        const derived = toYearMonth(candidate);
+        if (derived) {
+          return derived;
+        }
+      }
+      return null;
+    };
+
+    let txStarted = false;
+    try {
+      await query('BEGIN');
+      txStarted = true;
+
+      let inserted = 0;
+      const skipped: Array<{ index: number; reason: string }> = [];
+
+      for (let i = 0; i < jsonData.length; i += 1) {
+        const row = jsonData[i];
+        const envCandidate = row?.env ?? row?.env_name;
+        const envIdFromPayload = Number(row?.env_id);
+        const envId = Number.isFinite(envIdFromPayload) && envIdFromPayload > 0
+          ? envIdFromPayload
+          : envMap.get(normalize(envCandidate));
+
+        if (!envId) {
+          skipped.push({ index: i, reason: `ไม่พบ Environment: ${envCandidate ?? 'N/A'}` });
+          continue;
+        }
+
+        const yearMonth = deriveYearMonth(row);
+        const payloadJson = JSON.stringify(row);
+
+        await query(
+          `DELETE FROM public.app_content_sizing
+           WHERE pm_id = $1
+             AND env_id = $2
+             AND (
+               COALESCE("Year_month_file", '') = COALESCE($3, '')
+               OR ("Year_month_file" IS NULL AND $3 IS NOT NULL)
+             )`,
+          [pm_id, envId, yearMonth]
+        );
+
+        await query(
+          `INSERT INTO public.app_content_sizing (pm_id, env_id, app_size_json, "Year_month_file")
+           VALUES ($1, $2, $3, $4)`,
+          [pm_id, envId, payloadJson, yearMonth]
+        );
+
+        inserted += 1;
+      }
+
+      await query('COMMIT');
+      return res.status(200).json({ inserted, skipped });
+    } catch (error) {
+      if (txStarted) {
+        try {
+          await query('ROLLBACK');
+        } catch (rollbackError) {
+          console.error('Rollback error (app sizing import):', rollbackError);
+        }
+      }
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error importing application sizing:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const importAppOtherApiResponses = async (req: Request, res: Response) => {
+  const normalize = (value?: string | null) => (value || '').toString().trim().toLowerCase();
+
+  const toYearMonth = (value: any): string | null => {
+    if (value === undefined || value === null) return null;
+    const text = String(value).trim();
+    if (!text) return null;
+
+    const match = text.match(/^(\d{4})[-/](\d{1,2})/);
+    if (match) {
+      const month = match[2].padStart(2, '0');
+      return `${match[1]}-${month}`;
+    }
+
+    const parsed = new Date(text);
+    if (!Number.isNaN(parsed.getTime())) {
+      const year = parsed.getFullYear();
+      const month = String(parsed.getMonth() + 1).padStart(2, '0');
+      return `${year}-${month}`;
+    }
+
+    return null;
+  };
+
+  try {
+    const { pm_id, cust_code, env_id, jsonData } = req.body || {};
+
+    if (!pm_id || !cust_code || !env_id || !Array.isArray(jsonData) || jsonData.length === 0) {
+      return res.status(400).json({ error: 'pm_id, env_id, cust_code และ jsonData (array) จำเป็นต้องระบุ' });
+    }
+
+    const envId = Number(env_id);
+    if (!Number.isFinite(envId) || envId <= 0) {
+      return res.status(400).json({ error: 'env_id ไม่ถูกต้อง' });
+    }
+
+    const pmResult = await query(
+      `SELECT p.pm_id, p.cust_id, c.cust_code
+       FROM public.pm_plan p
+       JOIN public.customer c ON c.cust_id = p.cust_id
+       WHERE p.pm_id = $1`,
+      [pm_id]
+    );
+
+    if (pmResult.rows.length === 0) {
+      return res.status(404).json({ error: 'ไม่พบ PM plan ที่ระบุ' });
+    }
+
+    const { cust_id: custId, cust_code: dbCustCode } = pmResult.rows[0];
+    if (normalize(dbCustCode) !== normalize(cust_code)) {
+      return res.status(400).json({ error: `Customer code mismatch. Expected: ${dbCustCode}, Got: ${cust_code}` });
+    }
+
+    const envCheck = await query(
+      `SELECT e.env_id, e.env_name
+       FROM public.customer_env ce
+       JOIN public.env e ON e.env_id = ce.env_id
+       WHERE ce.cust_id = $1 AND ce.env_id = $2`,
+      [custId, envId]
+    );
+
+    if (envCheck.rows.length === 0) {
+      return res.status(400).json({ error: 'Environment ไม่ตรงกับลูกค้าที่เลือก' });
+    }
+
+    const deriveYearMonth = (): string | null => {
+      for (const row of jsonData) {
+        const candidates = [
+          row?.year_month_file,
+          row?.Year_month_file,
+          row?.year_month,
+          row?.date,
+          row?.datetime,
+          row?.timestamp
+        ];
+        for (const candidate of candidates) {
+          const derived = toYearMonth(candidate);
+          if (derived) {
+            return derived;
+          }
+        }
+      }
+      return null;
+    };
+
+    const derivedYearMonth = deriveYearMonth();
+    const fallback = (() => {
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    })();
+    const yearMonth = derivedYearMonth || fallback;
+
+    let txStarted = false;
+    try {
+      await query('BEGIN');
+      txStarted = true;
+
+      await query(
+        `DELETE FROM public.app_response
+         WHERE pm_id = $1
+           AND env_id = $2
+           AND COALESCE(year_month_file, '') = COALESCE($3, '')`,
+        [pm_id, envId, yearMonth]
+      );
+
+      await query(
+        `INSERT INTO public.app_response (pm_id, env_id, json_app_response, year_month_file)
+         VALUES ($1, $2, $3, $4)`,
+        [pm_id, envId, JSON.stringify(jsonData), yearMonth]
+      );
+
+      await query('COMMIT');
+      return res.status(200).json({ inserted: 1, env_id: envId, year_month_file: yearMonth });
+    } catch (error) {
+      if (txStarted) {
+        try {
+          await query('ROLLBACK');
+        } catch (rollbackError) {
+          console.error('Rollback error (app other import):', rollbackError);
+        }
+      }
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error importing application other API responses:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 export const importAlfrescoApiData = async (req: Request, res: Response) => {
   try {
     const { pm_id, cust_code, jsonData } = req.body;
@@ -400,22 +678,39 @@ export const importAlfrescoApiData = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'First row must contain customer and env fields' });
     }
 
-    // Validate customer code
+    const normalize = (value?: string | null) => (value || '').trim().toLowerCase();
+    const normalizedIncoming = normalize(firstRow.customer);
+    const normalizedParamCode = normalize(cust_code);
+
+    // Validate customer code or customer name
     const customerCheck = await query(
-      'SELECT cust_id FROM public.customer WHERE LOWER(cust_code) = LOWER($1)',
+      `SELECT cust_id, cust_code, cust_name
+       FROM public.customer
+       WHERE LOWER(cust_code) = LOWER($1) OR LOWER(cust_name) = LOWER($1)
+       LIMIT 1`,
       [firstRow.customer]
     );
 
     if (customerCheck.rows.length === 0) {
-      return res.status(400).json({ error: `Customer code "${firstRow.customer}" not found` });
+      return res.status(400).json({ error: `Customer "${firstRow.customer}" not found` });
     }
 
-    const custId = customerCheck.rows[0].cust_id;
+    const { cust_id: custId, cust_code: dbCustCode, cust_name: dbCustName } = customerCheck.rows[0];
+    const normalizedDbCode = normalize(dbCustCode);
+    const normalizedDbName = normalize(dbCustName);
 
-    // Validate if customer has this cust_code
-    if (firstRow.customer.toLowerCase() !== cust_code.toLowerCase()) {
-      return res.status(400).json({ 
-        error: `Customer code mismatch. Expected: ${cust_code}, Got: ${firstRow.customer}` 
+    const matchesCustomerField =
+      normalizedIncoming === normalizedDbCode || normalizedIncoming === normalizedDbName;
+
+    if (!matchesCustomerField) {
+      return res.status(400).json({
+        error: `Customer identifier "${firstRow.customer}" does not match customer code (${dbCustCode}) or name (${dbCustName})`
+      });
+    }
+
+    if (normalizedParamCode && normalizedParamCode !== normalizedDbCode) {
+      return res.status(400).json({
+        error: `Customer code mismatch. Expected: ${dbCustCode}, Got: ${cust_code}`
       });
     }
 
