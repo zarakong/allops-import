@@ -1,5 +1,5 @@
 import express from 'express';
-import { getPMTasks, createPMTask, updatePMTask, deletePMTask, getPMById, importPM, getPmRoundByKeys, getImportHeader, getAlfrescoApiResponses, getAppContentSizingRows, getAppResponseRows, importPMData, importAlfrescoApiData, importAppContentSizingData, importAppOtherApiResponses } from '../controllers/pmController';
+import { getPMTasks, createPMTask, updatePMTask, deletePMTask, getPMById, importPM, getPmRoundByKeys, getImportHeader, getAlfrescoApiResponses, getAppContentSizingRows, getAppResponseRows, importPMData, importAlfrescoApiData, importAppContentSizingData, importAppOtherApiResponses, updatePmStatus, getPMDetails } from '../controllers/pmController';
 
 const router = express.Router();
 
@@ -27,8 +27,14 @@ router.get('/:pmId/app-responses', getAppResponseRows);
 // Alfresco API data snapshot for Import PM page
 router.get('/:pmId/alfresco-api', getAlfrescoApiResponses);
 
+// Aggregated PM detail payload (report view)
+router.get('/:id/details', getPMDetails);
+
 // Route to get a single PM plan by id
 router.get('/:id', getPMById);
+
+// Route to update PM status flag
+router.patch('/:id/status', updatePmStatus);
 
 // Route to import PMs from JSON payload
 router.post('/import', importPM);

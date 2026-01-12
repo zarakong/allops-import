@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Report from './pages/Report';
@@ -13,12 +13,47 @@ import NewServer from './pages/NewServer';
 import Settings from './pages/Settings';
 import './index.css';
 
+type ThemeMode = 'light' | 'dark';
+
+const THEME_STORAGE_KEY = 'allops-theme';
+
+const getInitialTheme = (): ThemeMode => {
+  if (typeof window === 'undefined') {
+    return 'light';
+  }
+
+  const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+  if (stored === 'light' || stored === 'dark') {
+    return stored;
+  }
+
+  const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+  return prefersDark ? 'dark' : 'light';
+};
+
 const App: React.FC = () => {
+  const [theme, setTheme] = useState<ThemeMode>(getInitialTheme);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    const root = document.documentElement;
+    root.setAttribute('data-theme', theme);
+    document.body.dataset.theme = theme;
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+  };
+
   return (
     <Router>
       <div className="app-layout">
-        <Sidebar />
-            <main className="main-content">
+        <Sidebar theme={theme} onToggleTheme={toggleTheme} />
+        <main className="main-content">
           <Routes>
             <Route path="/report" element={<Report />} />
             <Route path="/customer" element={<Customer />} />

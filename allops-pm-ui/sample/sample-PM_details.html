@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PM Report - Alfresco System</title>
+    <style>
+        body {
+            font-family: 'Sarabun', 'Tahoms', sans-serif; /* ใช้ Font ที่รองรับภาษาไทย */
+            line-height: 1.6;
+            color: #333;
+            max-width: 210mm; /* ขนาด A4 */
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+        h1 { text-align: center; margin-bottom: 30px; }
+        .header-info {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #004085; /* สีน้ำเงินเข้มแบบ Corporate */
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .status-pass {
+            color: green;
+            font-weight: bold;
+        }
+        .status-fail {
+            color: red;
+            font-weight: bold;
+        }
+        .section-break {
+            page-break-before: always;
+        }
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #777;
+            margin-top: 50px;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <h1>Preventive Maintenance Report (PM)</h1>
+        <div class="header-info">
+            <p><strong>ลูกค้า:</strong> สำนักงานคณะกรรมการกำกับกิจการพลังงาน [cite: 48]</p>
+            <p><strong>รอบการดำเนินงาน:</strong> 4 พฤศจิกายน 2568 - 2 ธันวาคม 2568 [cite: 49]</p>
+            <p><strong>ครั้งที่:</strong> 6 (PM 2025-2026) </p>
+        </div>
+    </header>
+
+    <section>
+        <h2>1. บทสรุปผู้บริหาร (Conclusion) [cite: 52]</h2>
+        <table>
+            <tr>
+                <th width="30%">หัวข้อ (Title)</th>
+                <th>รายละเอียด (Detail)</th>
+            </tr>
+            <tr>
+                <td>วันที่เข้าดำเนินงาน</td>
+                <td>2 ธันวาคม 2568</td>
+            </tr>
+            <tr>
+                <td>ภาพรวมระบบ Server</td>
+                <td>
+                    <ul>
+                        <li>ระบบ ECM ใช้งานได้ปกติ ตรวจสอบจาก Function พื้นฐาน [cite: 54]</li>
+                        <li>พื้นที่ Contentstore เหลือ 4.2 TB เพียงพอสำหรับการใช้งาน [cite: 55]</li>
+                        <li>พื้นที่ Database (PostgreSQL) เพียงพอต่อการใช้งาน (Free Space 159 GB) [cite: 56]</li>
+                    </ul>
+                </td>
+            </tr>
+        </table>
+    </section>
+
+    <section>
+        <h2>2. เปรียบเทียบประสิทธิภาพระบบ (Health Check Comparison) [cite: 57]</h2>
+        
+        <h3>2.1 Server Resource Monitoring (UAT: 192.168.30.17)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>รายการตรวจสอบ</th>
+                    <th>PM ครั้งที่ 4<br>(2 ต.ค. 68)</th>
+                    <th>PM ครั้งที่ 5<br>(3 พ.ย. 68)</th>
+                    <th>PM ครั้งที่ 6<br>(2 ธ.ค. 68)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>CPU Usage</td>
+                    <td>20-50%</td>
+                    <td>20-50%</td>
+                    <td>20-50%</td>
+                </tr>
+                <tr>
+                    <td>RAM Usage</td>
+                    <td>50-70%</td>
+                    <td>50-70%</td>
+                    <td>50-70%</td>
+                </tr>
+                <tr>
+                    <td>Partition /data (Used)</td>
+                    <td>20 GB</td>
+                    <td>120 GB</td>
+                    <td>125 GB</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>2.2 Application Health Check [cite: 60]</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>รายการตรวจสอบ</th>
+                    <th>PM ครั้งที่ 4</th>
+                    <th>PM ครั้งที่ 5</th>
+                    <th>PM ครั้งที่ 6</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Content Size</td>
+                    <td>7.6 TB</td>
+                    <td>7.0 TB</td>
+                    <td>3.4 TB</td>
+                </tr>
+                <tr>
+                    <td>Index Size</td>
+                    <td>13 GB</td>
+                    <td>14 GB</td>
+                    <td>14 GB</td>
+                </tr>
+                <tr>
+                    <td>Search Speed</td>
+                    <td>1-3 Sec</td>
+                    <td>1-3 Sec</td>
+                    <td>1-3 Sec</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <div class="section-break"></div>
+
+    <section>
+        <h2>3. ตรวจสอบรายละเอียดเครื่องแม่ข่าย (Server Infrastructure) [cite: 63]</h2>
+        
+        <h3>3.1 Server Alfresco (App Server)</h3>
+        <p><strong>Hostname:</strong> DMSAPP | <strong>IP:</strong> 192.168.30.17 (UAT) / 192.168.30.18 (PRD)</p>
+        <p><strong>OS:</strong> Ubuntu 22.04 LTS | <strong>CPU:</strong> Intel Xeon Gold 5118 | <strong>RAM:</strong> 48 GB [cite: 71, 72]</p>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Partition</th>
+                    <th>Total Space</th>
+                    <th>Used / Free</th>
+                    <th>Recommendation</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>/opt (OS/App)</td>
+                    <td>293 GB</td>
+                    <td>133 GB / 148 GB</td>
+                    <td>ปกติ</td>
+                </tr>
+                <tr>
+                    <td>/data (Content)</td>
+                    <td>7.9 TB</td>
+                    <td>3.4 TB / 4.2 TB</td>
+                    <td>Content Alfresco [cite: 80]</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>3.2 Server Database</h3>
+        <p><strong>Hostname:</strong> DMSDB | <strong>IP:</strong> 192.168.30.19</p>
+        <p><strong>Software:</strong> PostgreSQL 15.4 [cite: 82]</p>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Partition</th>
+                    <th>Total Space</th>
+                    <th>Used / Free</th>
+                    <th>Recommendation</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>/opt/beflex-database</td>
+                    <td>490 GB</td>
+                    <td>310 GB / 159 GB</td>
+                    <td>พื้นที่เพียงพอต่อการใช้งาน [cite: 86]</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <div class="section-break"></div>
+
+    <section>
+        <h2>4. การตั้งค่าระบบ (System Configuration) [cite: 32]</h2>
+        <table>
+            <tr>
+                <th width="30%">Parameter</th>
+                <th>Production Environment</th>
+            </tr>
+            <tr>
+                <td>Alfresco URL</td>
+                <td>https://dms.erc.or.th/</td>
+            </tr>
+            <tr>
+                <td>Database Connection</td>
+                <td>192.168.30.19:5432 (PostgreSQL)</td>
+            </tr>
+            <tr>
+                <td>LDAP Server</td>
+                <td>ldap://erc.or.th:389</td>
+            </tr>
+            <tr>
+                <td>Java Heap Size (Xmx)</td>
+                <td>16384m (16GB)</td>
+            </tr>
+        </table>
+    </section>
+
+    <section>
+        <h2>5. ผลการทดสอบการใช้งาน (Functional Test) [cite: 40]</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>No.</th>
+                    <th>รายการทดสอบ (Test Case)</th>
+                    <th>เวลาที่ใช้ (Actual)</th>
+                    <th>เกณฑ์มาตรฐาน (Baseline)</th>
+                    <th>ผลการทดสอบ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>Upload File "File_test_delete"</td>
+                    <td>2 Sec</td>
+                    <td>2 Sec</td>
+                    <td class="status-pass">ปกติ</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Search "File_test_delete*"</td>
+                    <td>2 Sec</td>
+                    <td>3 Sec</td>
+                    <td class="status-pass">ปกติ</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>Rename File</td>
+                    <td>2 Sec</td>
+                    <td>1 Sec</td>
+                    <td class="status-pass">ปกติ</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>Delete File</td>
+                    <td>2 Sec</td>
+                    <td>1 Sec</td>
+                    <td class="status-pass">ปกติ</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <div class="footer">
+        <p>Report Generated for Alfresco Maintenance Service | Ref: PM Report 2025-2026 No.6</p>
+    </div>
+
+</body>
+</html>

@@ -39,7 +39,12 @@ const MenuIcon = () => (
   </svg>
 );
 
-const Sidebar: React.FC = () => {
+type SidebarProps = {
+  theme: 'light' | 'dark';
+  onToggleTheme: () => void;
+};
+
+const Sidebar: React.FC<SidebarProps> = ({ theme, onToggleTheme }) => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
 
@@ -85,6 +90,22 @@ const Sidebar: React.FC = () => {
             <div className="user-name">Admin User</div>
             <div className="user-role">Administrator</div>
           </div>
+        </div>
+
+        <div className="sidebar-theme-toggle">
+          <div className="theme-toggle-text">
+            <span className="theme-toggle-label">Appearance</span>
+            <span className="theme-toggle-value">{theme === 'dark' ? 'Dark mode' : 'Light mode'}</span>
+          </div>
+          <button
+            type="button"
+            className={`theme-toggle-button ${theme === 'dark' ? 'dark' : ''}`}
+            onClick={onToggleTheme}
+            aria-pressed={theme === 'dark'}
+            aria-label="Toggle dark mode"
+          >
+            <span className="theme-toggle-thumb" aria-hidden="true" />
+          </button>
         </div>
 
         <nav className="sidebar-menu">

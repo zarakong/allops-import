@@ -61,6 +61,20 @@ export const fetchCustomerServers = async (id: number): Promise<any[]> => {
   }
 };
 
+export const updateServerPaths = async (
+  custId: number,
+  serverId: number,
+  payload: { path_app?: string | null; path_data?: string | null }
+): Promise<any> => {
+  try {
+    const response = await axios.put(`${API_BASE_URL}/api/customers/${custId}/servers/${serverId}/paths`, payload);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating server paths:', error);
+    throw error;
+  }
+};
+
 export const fetchCustomerEnvs = async (id: number): Promise<Array<{ cust_id: number; env_id: number; env_name: string; server_id: number }>> => {
   try {
     const response = await axios.get(`${API_BASE_URL}/api/customers/${id}/envs`);
@@ -79,6 +93,18 @@ export const fetchCustomerWorkspaceDetails = async (
     return response.data;
   } catch (error) {
     console.error('Error fetching customer workspace details:', error);
+    throw error;
+  }
+};
+
+export const fetchCustomerWorkspaceContentStore = async (
+  id: number
+): Promise<Array<{ env_id: number; env_name: string | null; cont_all_kb: number | null; alf_version_json: unknown; created_at: string | null; pm_id?: number; pm_year?: number; pm_round?: number }>> => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/api/customers/${id}/workspace-content-store`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching customer content store summary:', error);
     throw error;
   }
 };
@@ -118,6 +144,10 @@ export const fetchCustomerDiagram = async (custId: number): Promise<DiagramUploa
     const response = await axios.get(`${API_BASE_URL}/api/customers/${custId}/diagram-project`);
     return response.data;
   } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      // Diagram project is optional; treat missing record as null instead of failing the entire page.
+      return null;
+    }
     console.error('Error fetching customer diagram:', error);
     throw error;
   }
@@ -183,6 +213,61 @@ export const checkDiagramWebhookHealth = async (): Promise<DiagramWebhookHealth>
     return response.data;
   } catch (error) {
     console.error('Error checking diagram webhook health:', error);
+    throw error;
+  }
+};
+
+// Application management
+export interface AppListItem {
+  applist_id: number;
+  applist_name: string;
+}
+
+export const fetchAllAppList = async (): Promise<AppListItem[]> => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/api/customers/app-list`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching app list:', error);
+    throw error;
+  }
+};
+
+export const fetchServerApplications = async (custId: number, serverId: number): Promise<AppListItem[]> => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/api/customers/${custId}/servers/${serverId}/applications`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching server applications:', error);
+    throw error;
+  }
+};
+
+export const addServerApplication = async (
+  custId: number,
+  serverId: number,
+  applist_name: string
+): Promise<AppListItem> => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/api/customers/${custId}/servers/${serverId}/applications`, {
+      applist_name,
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error adding server application:', error);
+    throw error;
+  }
+};
+
+export const removeServerApplication = async (
+  custId: number,
+  serverId: number,
+  appId: number
+): Promise<void> => {
+  try {
+    await axios.delete(`${API_BASE_URL}/api/customers/${custId}/servers/${serverId}/applications/${appId}`);
+  } catch (error) {
+    console.error('Error removing server application:', error);
     throw error;
   }
 };

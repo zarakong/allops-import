@@ -42,6 +42,16 @@ export const fetchPMById = async (id: number): Promise<any> => {
   }
 };
 
+export const fetchPMDetails = async (id: number): Promise<any> => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/api/pm/${id}/details`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching PM details:', error);
+    throw error;
+  }
+};
+
 export const fetchPmRound = async (pmId: number, envId: number, serverId: number): Promise<any[]> => {
   try {
     const url = `${API_BASE_URL}/api/pm/round`;
@@ -90,6 +100,16 @@ export const updatePMPlan = async (id: number, plan: any): Promise<any> => {
     return response.data;
   } catch (error) {
     console.error('Error updating pm plan:', error);
+    throw error;
+  }
+};
+
+export const updatePMStatus = async (id: number, status: boolean): Promise<any> => {
+  try {
+    const response = await axios.patch(`${API_BASE_URL}/api/pm/${id}/status`, { status });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating PM status:', error);
     throw error;
   }
 };
@@ -206,11 +226,13 @@ const api = {
   fetchPMPlansByCustomer,
   fetchPMPlans,
   fetchPMById,
+  fetchPMDetails,
   fetchCustomerById,
   fetchPmRound,
   fetchImportHeader,
   createPMPlan,
   updatePMPlan,
+  updatePMStatus,
   deletePMPlan,
   importPM,
   fetchAlfrescoApiResponses,

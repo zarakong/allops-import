@@ -72,6 +72,153 @@ export const deletePMTask = async (req: Request, res: Response) => {
   res.status(204).send();
 };
 
+export const getPMDetails = async (req: Request, res: Response) => {
+  const pmIdParam = req.params.pmId || req.params.id;
+  const pmId = pmIdParam ? Number(pmIdParam) : null;
+
+  if (!Number.isFinite(pmId)) {
+    return res.status(400).json({ error: 'pm_id is required' });
+  }
+
+  try {
+    const headerSql = `SELECT p.pm_id, p.pm_name, p.pm_round, p.pm_year, p.pm_status,
+        p.created_at AS pm_created_at, p.pm_check_date,
+        c.cust_id, c.cust_name, c.cust_code, c.project_name
+      FROM public.pm_plan p
+      JOIN public.customer c ON c.cust_id = p.cust_id
+      WHERE p.pm_id = $1`;
+
+    const headerResult = await query(headerSql, [pmId]);
+    if (headerResult.rowCount === 0) {
+      return res.status(404).json({ error: 'PM plan not found' });
+    }
+
+    const serverSql = `
+      SELECT ranked.* FROM (
+        SELECT s.serv_id, s.env_id, e.env_name, s.pm_id, s.create_at,
+               s.cust_id, s.serv_name, s.serv_os, s.serv_os_version,
+               s.serv_ram, s.serv_cpu_model_name, s.serv_cpu_cores,
+               s.server_id, s.serv_disk, s.path_app, s.path_data,
+               se.server_name AS reference_server_name,
+               COALESCE(
+                 (SELECT json_agg(al.applist_name ORDER BY al.applist_name)
+                  FROM public.server_applist sa
+                  JOIN public.app_list al ON al.applist_id = sa.applist_id
+                  WHERE sa.server_id = s.server_id),
+                 '[]'::json
+               ) AS applications,
+               ROW_NUMBER() OVER (PARTITION BY s.env_id, s.server_id ORDER BY s.create_at DESC) AS rn
+        FROM public.server s
+        LEFT JOIN public.env e ON e.env_id = s.env_id
+        LEFT JOIN public.server_env se ON se.server_id = s.server_id
+        WHERE s.pm_id = $1
+      ) ranked
+      WHERE ranked.rn = 1
+      ORDER BY ranked.env_name NULLS LAST, ranked.create_at DESC;
+    `;
+
+    const pmRoundsSql = `
+      SELECT pr.pm_round_id, pr.pm_id, pr.env_id, e.env_name, pr.server_id,
+             pr.created_at, pr.json_alf_transact, pr.json_alf_api_total,
+             pr.json_alf_api_size, pr.json_alf_cont_size,
+             pr.json_workspace, pr.json_workspace_path
+      FROM public.pm_round pr
+      LEFT JOIN public.env e ON e.env_id = pr.env_id
+      WHERE pr.pm_id = $1
+      ORDER BY pr.created_at DESC NULLS LAST;
+    `;
+
+    const contentSql = `
+      SELECT ac.pm_id, ac.env_id, e.env_name, ac.cont_all_kb, ac.cont_year_json,
+             ac.cont_month_json, ac.created_at, ac.alf_version_json
+      FROM public.alf_contentstore ac
+      LEFT JOIN public.env e ON e.env_id = ac.env_id
+      WHERE ac.pm_id = $1
+      ORDER BY ac.created_at DESC NULLS LAST;
+    `;
+
+    const alfApiSql = `
+      SELECT aa.alfapi_id, aa.pm_id, aa.env_id, e.env_name, aa.api_date, aa.api_json
+      FROM public.alf_api aa
+      LEFT JOIN public.env e ON e.env_id = aa.env_id
+      WHERE aa.pm_id = $1
+      ORDER BY aa.api_date DESC NULLS LAST, aa.alfapi_id DESC;
+    `;
+
+    const appSizingSql = `
+      SELECT DISTINCT ON (acs.env_id, acs."Year_month_file")
+             acs.appcont_id, acs.pm_id, acs.env_id, e.env_name,
+             acs."Year_month_file" AS year_month_file,
+             acs.app_size_json
+      FROM public.app_content_sizing acs
+      LEFT JOIN public.env e ON e.env_id = acs.env_id
+      WHERE acs.pm_id = $1
+      ORDER BY acs.env_id, acs."Year_month_file" DESC NULLS LAST, acs.appcont_id DESC;
+    `;
+
+    const appResponseSql = `
+      SELECT DISTINCT ON (ar.env_id, ar.year_month_file)
+             ar.pm_id, ar.res_id, ar.env_id, e.env_name,
+             ar.year_month_file, ar.json_app_response
+      FROM public.app_response ar
+      LEFT JOIN public.env e ON e.env_id = ar.env_id
+      WHERE ar.pm_id = $1
+      ORDER BY ar.env_id, ar.year_month_file DESC NULLS LAST, ar.res_id DESC;
+    `;
+
+    const [servers, pmRounds, contentStores, alfrescoApi, appSizing, appResponses] = await Promise.all([
+      query(serverSql, [pmId]),
+      query(pmRoundsSql, [pmId]),
+      query(contentSql, [pmId]),
+      query(alfApiSql, [pmId]),
+      query(appSizingSql, [pmId]),
+      query(appResponseSql, [pmId]),
+    ]);
+
+    return res.status(200).json({
+      header: headerResult.rows[0],
+      servers: servers.rows,
+      pmRounds: pmRounds.rows,
+      contentStores: contentStores.rows,
+      alfrescoApi: alfrescoApi.rows,
+      appSizing: appSizing.rows,
+      appResponses: appResponses.rows,
+    });
+  } catch (error) {
+    console.error('Error fetching PM details:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const updatePmStatus = async (req: Request, res: Response) => {
+  const pmId = Number(req.params.id);
+  const { status } = req.body || {};
+
+  if (!Number.isFinite(pmId)) {
+    return res.status(400).json({ error: 'Invalid pm_id' });
+  }
+
+  if (typeof status !== 'boolean') {
+    return res.status(400).json({ error: 'status must be boolean' });
+  }
+
+  try {
+    const result = await query(
+      'UPDATE public.pm_plan SET pm_status = $1 WHERE pm_id = $2 RETURNING pm_id, pm_status',
+      [status, pmId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'PM plan not found' });
+    }
+
+    return res.status(200).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating PM status:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 export const getPMById = async (req: Request, res: Response) => {
   const id = req.params.id;
   try {

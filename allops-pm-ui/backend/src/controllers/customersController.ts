@@ -279,12 +279,13 @@ export const getCustomerById = async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
         const sql = `SELECT c.cust_id as id, c.cust_name, c.cust_code, c.project_name, c.created_at, c.cust_desc, c.status,
+            c.path_app, c.path_data,
             string_agg(DISTINCT e.env_name, ', ' ORDER BY e.env_name) AS env_name
             FROM public.customer c
             LEFT JOIN public.customer_env ce ON ce.cust_id = c.cust_id
             LEFT JOIN public.env e ON e.env_id = ce.env_id
             WHERE c.cust_id = $1
-            GROUP BY c.cust_id, c.cust_name, c.cust_code, c.project_name, c.created_at, c.cust_desc, c.status`;
+            GROUP BY c.cust_id, c.cust_name, c.cust_code, c.project_name, c.created_at, c.cust_desc, c.status, c.path_app, c.path_data`;
         const result = await query(sql, [id]);
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Customer not found' });
@@ -304,7 +305,15 @@ export const getCustomerServers = async (req: Request, res: Response) => {
 SELECT s.serv_id, s.env_id, e.env_name, s.pm_id, s.create_at, s.cust_id,
        s.serv_name, s.serv_os, s.serv_os_version, s.serv_ram, 
        s.serv_cpu_model_name, s.serv_cpu_cores, s.server_id,
-       se.server_name
+       s.serv_disk, s.path_app, s.path_data,
+       se.server_name,
+       COALESCE(
+         (SELECT json_agg(al.applist_name ORDER BY al.applist_name)
+          FROM public.server_applist sa
+          JOIN public.app_list al ON al.applist_id = sa.applist_id
+          WHERE sa.server_id = s.server_id),
+         '[]'::json
+       ) AS applications
 FROM public.server s
 LEFT JOIN public.env e ON e.env_id = s.env_id
 LEFT JOIN public.server_env se ON se.server_id = s.server_id
@@ -321,6 +330,45 @@ ORDER BY s.env_id, s.server_id;
         res.status(200).json(result.rows);
     } catch (error) {
         console.error('Error fetching customer servers:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+export const updateServerPaths = async (req: Request, res: Response) => {
+    const { id, serverId } = req.params;
+    const customerId = Number(id);
+    const servId = Number(serverId);
+    if (!Number.isFinite(customerId) || !Number.isFinite(servId)) {
+        return res.status(400).json({ error: 'Invalid customer or server id' });
+    }
+
+    const sanitizePath = (value: unknown) => {
+        if (typeof value !== 'string') return null;
+        const trimmed = value.trim();
+        if (!trimmed) return null;
+        return trimmed.slice(0, 200);
+    };
+
+    const normalizedPathApp = sanitizePath((req.body || {}).path_app);
+    const normalizedPathData = sanitizePath((req.body || {}).path_data);
+
+    try {
+        const result = await query(
+            `UPDATE public.server
+             SET path_app = $1,
+                 path_data = $2
+             WHERE serv_id = $3 AND cust_id = $4
+             RETURNING serv_id, cust_id, path_app, path_data;`,
+            [normalizedPathApp, normalizedPathData, servId, customerId]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Server not found for this customer' });
+        }
+
+        res.status(200).json(result.rows[0]);
+    } catch (error) {
+        logger.error('Error updating server paths', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 };
@@ -550,6 +598,50 @@ ORDER BY env_list.env_name;
                 res.status(500).json({ error: 'Internal server error' });
         }
 };
+
+        export const getCustomerWorkspaceContentStore = async (req: Request, res: Response) => {
+            const { id } = req.params;
+            if (!id) {
+                return res.status(400).json({ error: 'Missing customer id' });
+            }
+            try {
+                const sql = `
+        WITH ranked AS (
+            SELECT
+            ac.env_id,
+            e.env_name,
+            ac.cont_all_kb,
+            ac.alf_version_json,
+            ac.created_at,
+            ac.pm_id,
+            pp.pm_year,
+            pp.pm_round,
+            ROW_NUMBER() OVER (PARTITION BY ac.env_id ORDER BY ac.created_at DESC NULLS LAST, ac.pm_id DESC) AS rn
+            FROM public.alf_contentstore ac
+            JOIN public.pm_plan pp ON pp.pm_id = ac.pm_id
+            LEFT JOIN public.env e ON e.env_id = ac.env_id
+            WHERE pp.cust_id = $1
+        )
+        SELECT
+            env_id,
+            env_name,
+            cont_all_kb,
+            alf_version_json,
+            created_at,
+            pm_id,
+            pm_year,
+            pm_round
+        FROM ranked
+        WHERE rn = 1
+        ORDER BY env_name NULLS LAST, env_id;
+                `;
+                const result = await query(sql, [id]);
+                res.status(200).json(result.rows);
+            } catch (error) {
+                console.error('Error fetching customer workspace content store:', error);
+                res.status(500).json({ error: 'Internal server error' });
+            }
+        };
 
 // Add server_env rows and link to customer_env for a specific customer
 export const addCustomerServerEnvs = async (req: Request, res: Response) => {
@@ -868,5 +960,136 @@ export const checkDiagramWebhookHealth = async (_req: Request, res: Response) =>
     } catch (error) {
         logger.error('Unexpected error during webhook health check', { error });
         return res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+// Get all applications from app_list
+export const getAllAppList = async (_req: Request, res: Response) => {
+    try {
+        const result = await query(
+            'SELECT applist_id, applist_name FROM public.app_list ORDER BY applist_name',
+            []
+        );
+        res.status(200).json(result.rows);
+    } catch (error) {
+        logger.error('Error fetching app list', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+// Get applications for a specific server
+export const getServerApplications = async (req: Request, res: Response) => {
+    const { id, serverId } = req.params;
+    const serverIdNum = Number(serverId);
+
+    if (!Number.isFinite(serverIdNum)) {
+        return res.status(400).json({ error: 'Invalid server id' });
+    }
+
+    try {
+        const result = await query(
+            `SELECT al.applist_id, al.applist_name
+             FROM public.server_applist sa
+             JOIN public.app_list al ON al.applist_id = sa.applist_id
+             WHERE sa.server_id = $1
+             ORDER BY al.applist_name`,
+            [serverIdNum]
+        );
+        res.status(200).json(result.rows);
+    } catch (error) {
+        logger.error('Error fetching server applications', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+// Add application to server
+export const addServerApplication = async (req: Request, res: Response) => {
+    const { id, serverId } = req.params;
+    const { applist_name } = req.body;
+    const serverIdNum = Number(serverId);
+
+    if (!Number.isFinite(serverIdNum)) {
+        return res.status(400).json({ error: 'Invalid server id' });
+    }
+
+    if (!applist_name || typeof applist_name !== 'string' || !applist_name.trim()) {
+        return res.status(400).json({ error: 'Application name is required' });
+    }
+
+    const trimmedName = applist_name.trim();
+
+    try {
+        // Check if app exists in app_list, if not create it
+        let appResult = await query(
+            'SELECT applist_id FROM public.app_list WHERE LOWER(applist_name) = LOWER($1)',
+            [trimmedName]
+        );
+
+        let applistId: number;
+
+        if (appResult.rowCount === 0) {
+            // Create new app
+            const insertResult = await query(
+                'INSERT INTO public.app_list (applist_name) VALUES ($1) RETURNING applist_id',
+                [trimmedName]
+            );
+            applistId = insertResult.rows[0].applist_id;
+        } else {
+            applistId = appResult.rows[0].applist_id;
+        }
+
+        // Check if already linked to server
+        const linkCheck = await query(
+            'SELECT 1 FROM public.server_applist WHERE server_id = $1 AND applist_id = $2',
+            [serverIdNum, applistId]
+        );
+
+        if (linkCheck.rowCount && linkCheck.rowCount > 0) {
+            return res.status(409).json({ error: 'Application already linked to this server' });
+        }
+
+        // Link to server
+        await query(
+            'INSERT INTO public.server_applist (server_id, applist_id) VALUES ($1, $2)',
+            [serverIdNum, applistId]
+        );
+
+        // Return the created/linked app
+        const result = await query(
+            'SELECT applist_id, applist_name FROM public.app_list WHERE applist_id = $1',
+            [applistId]
+        );
+
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        logger.error('Error adding server application', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+// Remove application from server
+export const removeServerApplication = async (req: Request, res: Response) => {
+    const { id, serverId, appId } = req.params;
+    const serverIdNum = Number(serverId);
+    const appIdNum = Number(appId);
+
+    if (!Number.isFinite(serverIdNum) || !Number.isFinite(appIdNum)) {
+        return res.status(400).json({ error: 'Invalid server id or application id' });
+    }
+
+    try {
+        const result = await query(
+            'DELETE FROM public.server_applist WHERE server_id = $1 AND applist_id = $2',
+            [serverIdNum, appIdNum]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Application link not found' });
+        }
+
+        res.status(204).send();
+    } catch (error) {
+        logger.error('Error removing server application', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 };

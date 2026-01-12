@@ -5,8 +5,6 @@
 /* CSS Variables for Design System */
 :root {
   /* Colors */
-  --primary-50: #eff6ff;
-  /* Graduation blue / calm palette */
   --primary-50: #f0f7ff;
   --primary-100: #dceeff;
   --primary-200: #bcd8ff;
@@ -17,7 +15,7 @@
   --primary-700: #173b66;
   --primary-800: #0f2a4a;
   --primary-900: #071827;
-  
+
   --gray-50: #f9fafb;
   --gray-100: #f3f4f6;
   --gray-200: #e5e7eb;
@@ -28,14 +26,14 @@
   --gray-700: #374151;
   --gray-800: #1f2937;
   --gray-900: #111827;
-  
+
   --success-500: #10b981;
   --success-600: #059669;
   --warning-500: #f59e0b;
   --warning-600: #d97706;
   --error-500: #ef4444;
   --error-600: #dc2626;
-  
+
   /* Spacing */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -58,6 +56,67 @@
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+  /* Theme tokens */
+  --body-bg: linear-gradient(180deg, #f6fbff 0%, #eef6ff 40%, #f6fbff 100%);
+  --layout-bg: linear-gradient(135deg, var(--gray-50) 0%, var(--primary-50) 100%);
+  --card-bg: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+  --card-border: rgba(43,108,176,0.08);
+  --card-header-bg: linear-gradient(90deg, rgba(43,108,176,0.04), rgba(43,108,176,0.02));
+  --table-header-bg: linear-gradient(90deg, rgba(43,108,176,0.12), rgba(43,108,176,0.06));
+  --table-cell-bg: rgba(240,248,255,0.6);
+  --table-hover-bg: rgba(240,248,255,0.9);
+  --table-border: rgba(43,108,176,0.04);
+  --text-body: var(--gray-900);
+  --text-muted: var(--gray-600);
+  --code-bg: var(--gray-100);
+  --input-bg: #ffffff;
+  --input-border: var(--gray-300);
+  --input-text: var(--gray-900);
+  --input-disabled-bg: var(--gray-50);
+  --input-disabled-text: var(--gray-500);
+  --focus-ring: var(--primary-100);
+  --tooltip-bg: var(--gray-900);
+  --tooltip-text: #ffffff;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --gray-50: #050a15;
+  --gray-100: #0b1222;
+  --gray-200: #131c33;
+  --gray-300: #192541;
+  --gray-400: #22324f;
+  --gray-500: #2f3f5d;
+  --gray-600: #9fb3d1;
+  --gray-700: #cbd5f5;
+  --gray-800: #e3e8ff;
+  --gray-900: #f8fafc;
+
+  --body-bg: radial-gradient(circle at 20% 20%, #121c33 0%, #080f1f 60%, #050914 100%);
+  --layout-bg: linear-gradient(135deg, #050a15 0%, #0f172a 60%, #050a15 100%);
+  --card-bg: linear-gradient(180deg, rgba(21, 32, 54, 0.95) 0%, rgba(10, 16, 29, 0.95) 100%);
+  --card-border: rgba(148, 163, 184, 0.3);
+  --card-header-bg: linear-gradient(90deg, rgba(47, 84, 235, 0.15), rgba(47, 84, 235, 0.05));
+  --table-header-bg: linear-gradient(90deg, rgba(47, 84, 235, 0.3), rgba(47, 84, 235, 0.15));
+  --table-cell-bg: rgba(15, 23, 42, 0.85);
+  --table-hover-bg: rgba(33, 45, 67, 0.9);
+  --table-border: rgba(99, 102, 241, 0.25);
+  --text-body: #e2e8f0;
+  --text-muted: #9fb3d1;
+  --code-bg: rgba(15, 23, 42, 0.85);
+  --input-bg: rgba(10, 18, 33, 0.85);
+  --input-border: rgba(148, 163, 184, 0.35);
+  --input-text: #e2e8f0;
+  --input-disabled-bg: rgba(15, 23, 42, 0.5);
+  --input-disabled-text: rgba(148, 163, 184, 0.6);
+  --focus-ring: rgba(96, 165, 250, 0.35);
+  --tooltip-bg: rgba(8, 15, 31, 0.95);
+  --tooltip-text: #e2e8f0;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 8px 15px -4px rgb(0 0 0 / 0.6);
+  --shadow-lg: 0 18px 35px -8px rgb(3 7 18 / 0.7);
+  --shadow-xl: 0 30px 55px -12px rgb(3 7 18 / 0.8);
 }
 
 * {
@@ -70,14 +129,15 @@ body {
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: linear-gradient(180deg, #f6fbff 0%, #eef6ff 40%, #f6fbff 100%);
-  color: var(--gray-900);
+  background: var(--body-bg);
+  color: var(--text-body);
   line-height: 1.6;
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
 code {
   font-family: 'SF Mono', Monaco, Inconsolata, 'Roboto Mono', 'Source Code Pro', monospace;
-  background-color: var(--gray-100);
+  background-color: var(--code-bg);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
   font-size: 0.875em;
@@ -87,7 +147,8 @@ code {
 .app-layout {
   display: flex;
   min-height: 100vh;
-  background: linear-gradient(135deg, var(--gray-50) 0%, var(--primary-50) 100%);
+  background: var(--layout-bg);
+  transition: background 0.3s ease;
 }
 
 .main-content {
@@ -96,6 +157,7 @@ code {
   margin-left: 250px;
   min-height: 100vh;
   transition: margin-left 0.3s ease;
+  color: var(--text-body);
 }
 
 .container {
@@ -105,12 +167,13 @@ code {
 }
 
 .card {
-  background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+  background: var(--card-bg);
   border-radius: var(--radius-lg);
-  box-shadow: 0 8px 20px rgba(15, 42, 74, 0.06), 0 2px 6px rgba(15, 42, 74, 0.04);
-  border: 1px solid rgba(43,108,176,0.08);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--card-border);
   overflow: hidden;
   transition: all 0.2s ease;
+  color: var(--text-body);
 }
 
 .card:hover {
@@ -120,12 +183,13 @@ code {
 
 .card-header {
   padding: var(--space-6);
-  border-bottom: 1px solid rgba(43,108,176,0.06);
-  background: linear-gradient(90deg, rgba(43,108,176,0.04), rgba(43,108,176,0.02));
+  border-bottom: 1px solid var(--card-border);
+  background: var(--card-header-bg);
 }
 
 .card-body {
   padding: var(--space-6);
+  color: var(--text-body);
 }
 
 .card-title {
@@ -137,7 +201,7 @@ code {
 
 .card-subtitle {
   font-size: 0.875rem;
-  color: var(--gray-600);
+  color: var(--text-muted);
   margin: 0;
 }
 
@@ -292,11 +356,13 @@ h2 {
 
 /* Tables */
 .table-container {
-  background: white;
+  background: var(--card-bg);
   border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: var(--shadow-sm);
-  border: 1px solid var(--gray-200);
+  border: 1px solid var(--table-border);
+  color: var(--text-body);
+  transition: background 0.2s ease, border 0.2s ease, box-shadow 0.2s ease;
 }
 
 table {
@@ -304,11 +370,12 @@ table {
   border-collapse: separate;
   border-spacing: 0 8px;
   font-size: 0.95rem;
+  color: var(--text-body);
  }
 
 table th {
-  background: linear-gradient(90deg, rgba(43,108,176,0.12), rgba(43,108,176,0.06));
-  color: var(--primary-800);
+  background: var(--table-header-bg);
+  color: var(--text-body);
   font-weight: 700;
   padding: calc(var(--space-3)) var(--space-6);
   text-align: left;
@@ -322,10 +389,10 @@ table th {
 table td {
   padding: calc(var(--space-3)) var(--space-6);
   border-bottom: none;
-  color: var(--gray-900);
+  color: var(--text-body);
   vertical-align: middle;
-  background: rgba(240,248,255,0.6);
-  border: 1px solid rgba(43,108,176,0.04);
+  background: var(--table-cell-bg);
+  border: 1px solid var(--table-border);
   border-radius: 6px;
  }
 
@@ -334,17 +401,17 @@ table tbody tr {
 }
 
 table tbody tr:hover {
-  background-color: rgba(240,248,255,0.9);
+  background-color: var(--table-hover-bg);
  }
 
 /* Make tables pop with colorful headers and shadows */
 .table-container {
-  border: 1px solid rgba(43,108,176,0.06);
-  box-shadow: 0 8px 20px rgba(15,42,74,0.04);
+  border: 1px solid var(--table-border);
+  box-shadow: var(--shadow-md);
 }
 
 .table-highlight th {
-  background: linear-gradient(90deg, rgba(43,108,176,0.12), rgba(160,200,255,0.06));
+  background: var(--table-header-bg);
 }
 
 table tbody tr:last-child td {
@@ -437,7 +504,7 @@ table th:nth-child(5), table td:nth-child(5) { /* ปี PM column */
   display: block;
   margin-bottom: var(--space-2);
   font-weight: 500;
-  color: var(--gray-700);
+  color: var(--text-muted);
   font-size: 0.875rem;
 }
 
@@ -446,12 +513,13 @@ table th:nth-child(5), table td:nth-child(5) { /* ปี PM column */
 .form-group select {
   width: 100%;
   padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--gray-300);
+  border: 1px solid var(--input-border);
   border-radius: var(--radius-md);
   font-size: 0.875rem;
   font-family: inherit;
   transition: all 0.2s ease;
-  background-color: white;
+  background-color: var(--input-bg);
+  color: var(--input-text);
 }
 
 .form-group input:focus,
@@ -459,14 +527,14 @@ table th:nth-child(5), table td:nth-child(5) { /* ปี PM column */
 .form-group select:focus {
   outline: none;
   border-color: var(--primary-500);
-  box-shadow: 0 0 0 3px var(--primary-100);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .form-group input:disabled,
 .form-group textarea:disabled,
 .form-group select:disabled {
-  background-color: var(--gray-50);
-  color: var(--gray-500);
+  background-color: var(--input-disabled-bg);
+  color: var(--input-disabled-text);
   cursor: not-allowed;
 }
 
@@ -479,7 +547,7 @@ table th:nth-child(5), table td:nth-child(5) { /* ปี PM column */
 .form-help {
   margin-top: var(--space-1);
   font-size: 0.75rem;
-  color: var(--gray-500);
+  color: var(--text-muted);
 }
 
 /* Form Grid */
@@ -519,7 +587,7 @@ table th:nth-child(5), table td:nth-child(5) { /* ปี PM column */
 .search-input .search-icon {
   position: absolute;
   left: var(--space-3);
-  color: var(--gray-400);
+  color: var(--text-muted);
   pointer-events: none;
 }
 
@@ -528,7 +596,7 @@ table th:nth-child(5), table td:nth-child(5) { /* ปี PM column */
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  color: var(--gray-600);
+  color: var(--text-muted);
 }
 
 .spinner {
@@ -553,13 +621,13 @@ table th:nth-child(5), table td:nth-child(5) { /* ปี PM column */
 .page-title {
   font-size: 2rem;
   font-weight: 700;
-  color: var(--gray-900);
+  color: var(--text-body);
   margin: 0 0 var(--space-2) 0;
 }
 
 .page-subtitle {
   font-size: 1rem;
-  color: var(--gray-600);
+  color: var(--text-muted);
   margin: 0;
 }
 
@@ -654,8 +722,8 @@ table th:nth-child(5), table td:nth-child(5) { /* ปี PM column */
 .tooltip .tooltip-text {
   visibility: hidden;
   width: 200px;
-  background-color: var(--gray-900);
-  color: white;
+  background-color: var(--tooltip-bg);
+  color: var(--tooltip-text);
   text-align: center;
   border-radius: var(--radius-md);
   padding: var(--space-2) var(--space-3);
@@ -677,7 +745,7 @@ table th:nth-child(5), table td:nth-child(5) { /* ปี PM column */
   margin-left: -5px;
   border-width: 5px;
   border-style: solid;
-  border-color: var(--gray-900) transparent transparent transparent;
+  border-color: var(--tooltip-bg) transparent transparent transparent;
 }
 
 .tooltip:hover .tooltip-text {

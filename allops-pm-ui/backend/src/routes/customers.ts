@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { getCustomers, createCustomer, updateCustomer, getCustomerPMPlans, getCustomerById, getCustomerServers, createCustomerBatch, getEnvs, getCustomerEnvs, addCustomerServerEnvs, getCustomerWorkspaceDetails, getCustomerDiagramProject, uploadCustomerDiagramProject, checkDiagramWebhookHealth, proxyCustomerDiagramImage } from '../controllers/customersController';
+import { getCustomers, createCustomer, updateCustomer, getCustomerPMPlans, getCustomerById, getCustomerServers, createCustomerBatch, getEnvs, getCustomerEnvs, addCustomerServerEnvs, getCustomerWorkspaceDetails, getCustomerWorkspaceContentStore, getCustomerDiagramProject, uploadCustomerDiagramProject, checkDiagramWebhookHealth, proxyCustomerDiagramImage, updateServerPaths, getAllAppList, getServerApplications, addServerApplication, removeServerApplication } from '../controllers/customersController';
 
 const router = express.Router();
 const upload = multer({
@@ -24,6 +24,9 @@ router.get('/debug/apps-all', getAllAppDetails);
 // Route to list env values (must be before routes with :id)
 router.get('/envs', getEnvs);
 
+// Get all application list
+router.get('/app-list', getAllAppList);
+
 // Diagram webhook health
 router.get('/diagram-webhook-health', checkDiagramWebhookHealth);
 
@@ -36,11 +39,19 @@ router.get('/:id/pm-plans', getCustomerPMPlans);
 // Get servers for a specific customer
 router.get('/:id/servers', getCustomerServers);
 
+router.put('/:id/servers/:serverId/paths', updateServerPaths);
+
+// Server applications management
+router.get('/:id/servers/:serverId/applications', getServerApplications);
+router.post('/:id/servers/:serverId/applications', addServerApplication);
+router.delete('/:id/servers/:serverId/applications/:appId', removeServerApplication);
+
 // Get env list (customer_env) for specific customer
 router.get('/:id/envs', getCustomerEnvs);
 
 // Workspace details per environment for specific customer
 router.get('/:id/workspace-details', getCustomerWorkspaceDetails);
+router.get('/:id/workspace-content-store', getCustomerWorkspaceContentStore);
 
 // Diagram project image for specific customer
 router.get('/:id/diagram-project/image', proxyCustomerDiagramImage);

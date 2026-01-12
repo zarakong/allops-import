@@ -199,6 +199,101 @@
   color: #b91c1c;
 }
 
+.server-path-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-weight: 600;
+}
+
+.server-path-hint {
+  color: #dc2626;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.server-edit-icon {
+  background-color: transparent;
+  border: 1px solid #cbd5f5;
+  color: #1d4ed8;
+  cursor: pointer;
+  border-radius: 999px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.server-edit-icon:hover {
+  background-color: #eff6ff;
+  border-color: #60a5fa;
+}
+
+.server-edit-icon:disabled {
+  color: #94a3b8;
+  border-color: #e2e8f0;
+  cursor: not-allowed;
+  background-color: transparent;
+}
+
+.server-path-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.server-path-heading {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #0f172a;
+}
+
+.server-path-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.server-path-label-inline {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #0f172a;
+}
+
+.server-path-input {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.95rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.server-path-input:focus {
+  outline: none;
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.15);
+}
+
+.server-path-error {
+  color: #b91c1c;
+  font-size: 0.9rem;
+  background-color: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+}
+
+.server-path-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
 .spec-wrapper {
   display: flex;
   flex-direction: column;
@@ -213,6 +308,12 @@
   display: inline-block;
   white-space: normal;
   line-height: 1.35;
+}
+
+.workspace-footnote {
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  color: #94a3b8;
 }
 
 .diagram-wrapper {

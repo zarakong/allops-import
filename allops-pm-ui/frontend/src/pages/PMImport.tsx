@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { fetchPMById, fetchCustomerById, fetchImportHeader, fetchAlfrescoApiResponses, fetchAppContentSizing, fetchAppOtherApiResponses, importPMData, importAlfrescoApiData, importAppContentSizingData, importAppOtherApiData } from '../api/pm';
+import { fetchPMById, fetchCustomerById, fetchImportHeader, fetchAlfrescoApiResponses, fetchAppContentSizing, fetchAppOtherApiResponses, importPMData, importAlfrescoApiData, importAppContentSizingData, importAppOtherApiData, updatePMStatus } from '../api/pm';
 
 type HeaderInfo = {
   cust_id?: number | string;
@@ -82,6 +82,7 @@ const PMImport: React.FC = () => {
   const [appOtherImporting, setAppOtherImporting] = useState(false);
   const [importing, setImporting] = useState<Record<string, boolean>>({});
   const pmCsvInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const pmStatusSyncRef = useRef<{ pmId: number | null; syncedValue: boolean }>({ pmId: null, syncedValue: false });
 
   const parseJsonRecords = (text: string): any[] => {
     try {
@@ -525,6 +526,26 @@ const PMImport: React.FC = () => {
     return mergedAppOtherRows.filter((row) => String(row.env_id) === appOtherSelectedEnvId);
   }, [mergedAppOtherRows, appOtherSelectedEnvId]);
 
+  const appSizingEnvIds = useMemo(() => {
+    const sources = envUniqueRows.length > 0 ? envUniqueRows.map((row) => row.env_id) : mergedAppRows.map((row) => row.env_id);
+    return Array.from(new Set(sources.filter((id) => Number.isFinite(id))));
+  }, [envUniqueRows, mergedAppRows]);
+
+  const allAppSizingComplete = useMemo(() => {
+    if (appSizingEnvIds.length === 0) return false;
+    return appSizingEnvIds.every((envId) => mergedAppRows.some((row) => row.env_id === envId && !!row.year_month_file));
+  }, [appSizingEnvIds, mergedAppRows]);
+
+  const appOtherEnvIds = useMemo(() => {
+    const sources = envUniqueRows.length > 0 ? envUniqueRows.map((row) => row.env_id) : mergedAppOtherRows.map((row) => row.env_id);
+    return Array.from(new Set(sources.filter((id) => Number.isFinite(id))));
+  }, [envUniqueRows, mergedAppOtherRows]);
+
+  const allAppOtherComplete = useMemo(() => {
+    if (appOtherEnvIds.length === 0) return false;
+    return appOtherEnvIds.every((envId) => mergedAppOtherRows.some((row) => row.env_id === envId && !!row.year_month_file));
+  }, [appOtherEnvIds, mergedAppOtherRows]);
+
   const formatDate = (date: string | null) => {
     if (!date) return 'NONE';
     try {
@@ -540,6 +561,45 @@ const PMImport: React.FC = () => {
   const formatYearMonth = (value: string | null) => (value && value.trim().length > 0 ? value : 'NONE');
   const resolveAppStatus = (value: string | null) => (value ? 'Success' : 'Pending');
   const resolveAppOtherStatus = (value: string | null) => (value ? 'Success' : 'Pending');
+
+  useEffect(() => {
+    if (!resolvedPmId) {
+      return;
+    }
+
+    const allMenusComplete = allPmEnvsComplete && allAlfEnvsComplete && allAppSizingComplete && allAppOtherComplete;
+
+    if (!allMenusComplete) {
+      pmStatusSyncRef.current = { pmId: resolvedPmId, syncedValue: false };
+      return;
+    }
+
+    const alreadySynced =
+      pmStatusSyncRef.current.pmId === resolvedPmId && pmStatusSyncRef.current.syncedValue === true;
+
+    if (alreadySynced) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const syncStatus = async () => {
+      try {
+        await updatePMStatus(resolvedPmId, true);
+        if (!cancelled) {
+          pmStatusSyncRef.current = { pmId: resolvedPmId, syncedValue: true };
+        }
+      } catch (error) {
+        console.error('Failed to update PM status automatically:', error);
+      }
+    };
+
+    syncStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [resolvedPmId, allPmEnvsComplete, allAlfEnvsComplete, allAppSizingComplete, allAppOtherComplete]);
 
   const handleImportCsvClick = () => {
     csvInputRef.current?.click();
@@ -764,6 +824,11 @@ const PMImport: React.FC = () => {
         event.target.value = '';
       }
     }
+  };
+
+  const handlePmDetailsClick = () => {
+    if (!resolvedPmId) return;
+    navigate(`/pm/${resolvedPmId}`);
   };
 
   return (
@@ -1041,7 +1106,14 @@ const PMImport: React.FC = () => {
         </div>
       </div>
 
-      <div style={{ position: 'fixed', right: 20, bottom: 20 }}>
+      <div style={{ position: 'fixed', right: 20, bottom: 20, display: 'flex', gap: 8 }}>
+        <button
+          onClick={handlePmDetailsClick}
+          disabled={!resolvedPmId}
+          style={{ padding: '8px 12px', borderRadius: 6, opacity: resolvedPmId ? 1 : 0.6 }}
+        >
+          PM Details
+        </button>
         <button onClick={() => navigate(-1)} style={{ padding: '8px 12px', borderRadius: 6 }}>Back</button>
       </div>
     </div>
